@@ -31,19 +31,27 @@ yt-dlp や ffmpeg が別の場所にある場合は、`config.toml` の `[tools]
 git clone https://github.com/tokiwatch/radiko-dlp.git
 cd radiko-dlp
 
-# 1. ひな形から自分用の設定を作り、編集する（「設定」を参照）
+# 1. 試してみる: まず確認だけ行い（録音しない）、NHK-FM を今すぐ 1 分間録音する
+#    （sample.toml を使用。保存先: ~/Music/radiko/quickstart/）
+./radiko-record quickstart --config sample.toml --dry-run
+./radiko-record quickstart --config sample.toml
+
+# 2. ひな形から自分用の設定を作り、編集する（「設定」を参照）
 cp config.example.toml config.toml
 
-# 2. 動作を確認する（番組表は取得するが、録音はしない）
+# 3. 自分の番組を確認し、録音する
 ./radiko-record sample_program --dry-run
-
-# 3. 手動で 1 回録音する
 ./radiko-record sample_program
 
 # 4. crontab の内容をプレビューし、反映する
 ./manage_cron.py
 ./manage_cron.py --apply
 ```
+
+- 手順 1 は、実行するとすぐ録音を始め、1 分後に終了します（`sample.toml` は `duration = "00:01:00"` で `schedule` がないため、cron には登録されません）。`--dry-run` は録音しません。
+- `JOAK-FM` は東京の NHK-FM です。東京エリア以外ではエリア外のメッセージが出て中止するので、`sample.toml` の局IDを変更してください（[対応する局と制約](#対応する局と制約)を参照）。
+- 手順 3 も、実行するとすぐ録音を始め、設定した `duration`（ひな形では 51 分）の間続きます。先に `--dry-run` を使うか、試すときは `duration` を短くしてください。
+- 自動で録音が始まるのは、手順 4 のあとの `schedule` の時刻です。
 
 `radiko-record` と `manage_cron.py` は実行ファイルなので、先頭に `python3` は不要です。
 
@@ -205,6 +213,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 ```
 radiko-record        録音コマンド（実行ファイル）
 manage_cron.py       crontab の生成
+sample.toml          クイックスタート用サンプル（NHK-FM を 1 分録音）
 config.example.toml  config.toml のひな形
 config.toml          自分用の番組定義（git 管理外）
 radiko_dlp/

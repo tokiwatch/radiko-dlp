@@ -31,19 +31,27 @@ If yt-dlp or ffmpeg are installed elsewhere, set their paths in `[tools]` of `co
 git clone https://github.com/tokiwatch/radiko-dlp.git
 cd radiko-dlp
 
-# 1. Create your own config from the template, then edit it (see "Configuration")
+# 1. Try it: check first (records nothing), then record NHK-FM for 1 minute right now
+#    (uses sample.toml; the file is saved to ~/Music/radiko/quickstart/)
+./radiko-record quickstart --config sample.toml --dry-run
+./radiko-record quickstart --config sample.toml
+
+# 2. Create your own config from the template, then edit it (see "Configuration")
 cp config.example.toml config.toml
 
-# 2. Check what would happen (fetches the guide, records nothing)
+# 3. Check and record your own program
 ./radiko-record sample_program --dry-run
-
-# 3. Record once by hand
 ./radiko-record sample_program
 
 # 4. Preview the crontab lines, then register them
 ./manage_cron.py
 ./manage_cron.py --apply
 ```
+
+- Step 1 starts recording immediately and stops after one minute (`sample.toml` sets `duration = "00:01:00"` and has no `schedule`, so nothing is registered in cron). `--dry-run` never records.
+- `JOAK-FM` is NHK-FM Tokyo. Outside the Tokyo area the command stops with an area message; change the station ID in `sample.toml` (see [Stations and limitations](#stations-and-limitations)).
+- Step 3 also records right away, for the `duration` in your config (51 minutes in the template). Use `--dry-run` first, or shorten `duration` while testing.
+- Recording only starts automatically at the `schedule` time after step 4.
 
 `radiko-record` and `manage_cron.py` are executable scripts, so `python3` is not needed in front of them.
 
@@ -207,6 +215,7 @@ Messages printed by the tool (and written to the log) are in Japanese.
 ```
 radiko-record        recording command (executable script)
 manage_cron.py       crontab generator
+sample.toml          quick start sample (records NHK-FM for 1 minute)
 config.example.toml  template for config.toml
 config.toml          your program definitions (not tracked by git)
 radiko_dlp/

@@ -1,0 +1,22 @@
+# radiko-dlp クイックスタート用のサンプル設定
+#
+# NHK-FM（東京）を、今すぐ 1 分間だけ録音します。
+# schedule を書いていないので、cron には登録されません。
+#
+#   ./radiko-record quickstart --config sample.toml --dry-run   # 確認だけ（録音しない）
+#   ./radiko-record quickstart --config sample.toml             # 1 分間録音する
+#
+# 保存先: ~/Music/radiko/quickstart/
+#
+# 注意: JOAK-FM は東京エリアの局です。東京エリア以外では、エリア外のメッセージが出て中止します。
+#       その場合は station_url の局IDを、お住まいのエリアのNHK-FMに変更してください。
+#
+# 自分用の設定は config.example.toml を config.toml にコピーして作成します。
+
+[[programs]]
+key = "quickstart"
+name = "Quick Start"
+station_url = "https://radiko.jp/#!/live/JOAK-FM"
+duration = "00:01:00"
+output_dir = "~/Music/radiko/quickstart"
+filename = "{date}_{title}.m4a"
