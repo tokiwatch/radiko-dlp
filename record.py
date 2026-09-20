@@ -19,8 +19,10 @@ from radiru_dlp.guide import (
     sanitize_filename_part,
     station_id_from_url,
 )
+from radiru_dlp.station import StationError, check_station
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "config.toml"
+EXIT_STATION_UNAVAILABLE = 2
 
 
 def build_command(ffmpeg_path: str, yt_dlp_path: str, program: Program, output_path: Path) -> list[str]:
@@ -93,7 +95,39 @@ def main(argv: list[str] | None = None) -> int:
     start = datetime.now(JST)
     try:
         program = load_config(args.config).get(args.key)
-        info, guide_error = lookup_guide(program, start)
+    except ConfigError as exc:
+        print(f"設定エラー: {exc}", file=sys.stderr)
+        return 1
+
+    output_dir = Path(program.output_dir).expanduser()
+    if not args.dry_run:
+        log_dir = output_dir / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        logging.basicConfig(
+            filename=log_dir / f"{program.key}.log",
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(message)s",
+        )
+
+    def warn(message: str) -> None:
+        print(f"警告: {message}", file=sys.stderr)
+        if not args.dry_run:
+            logging.warning(message)
+
+    try:
+        station_warning = check_station(program)
+    except StationError as exc:
+        print(f"エラー: 「{program.name}」({program.key}) は録音できません。{exc}", file=sys.stderr)
+        if not args.dry_run:
+            logging.error("録音できない局のため中止しました: %s", exc)
+        return EXIT_STATION_UNAVAILABLE
+    if station_warning:
+        warn(station_warning)
+
+    info, guide_error = lookup_guide(program, start)
+    if guide_error:
+        warn(f"番組表を利用できないため設定の番組名で録音します: {guide_error}")
+    try:
         output_path = build_output_path(program, info, start)
     except ConfigError as exc:
         print(f"設定エラー: {exc}", file=sys.stderr)
@@ -103,24 +137,12 @@ def main(argv: list[str] | None = None) -> int:
     command = build_command(args.ffmpeg, args.yt_dlp, program, output_path)
 
     if args.dry_run:
-        if guide_error:
-            print(f"警告: {guide_error}", file=sys.stderr)
         print(shlex.join(command))
         for key, value in tags.items():
             print(f"  {key}: {value}")
         return 0
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    log_dir = output_path.parent / "logs"
-    log_dir.mkdir(exist_ok=True)
-    logging.basicConfig(
-        filename=log_dir / f"{program.key}.log",
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-    if guide_error:
-        logging.warning("番組表を利用できないため設定の番組名で録音します: %s", guide_error)
-
     logging.info("録音開始: %s -> %s", program.name, output_path)
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:

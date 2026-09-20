@@ -51,6 +51,11 @@ def decode_body(body: bytes) -> str:
     return body.decode("utf-8")
 
 
+def fetch_text(url: str, timeout: float = 15) -> str:
+    with urllib.request.urlopen(url, timeout=timeout) as response:
+        return decode_body(response.read())
+
+
 def _parse_time(value: str) -> datetime:
     return datetime.strptime(value, "%Y%m%d%H%M%S").replace(tzinfo=JST)
 
@@ -86,8 +91,7 @@ def fetch_program(station_id: str, start: datetime, duration_seconds: int, timeo
     broadcast_date = (start - timedelta(hours=BROADCAST_DAY_START_HOUR)).strftime("%Y%m%d")
     url = GUIDE_URL.format(date=broadcast_date, station=station_id)
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
-            programs = parse_guide(decode_body(response.read()))
+        programs = parse_guide(fetch_text(url, timeout))
     except Exception as exc:  # 番組表は補助情報。どんな失敗でも録音を止めないためGuideErrorに集約する
         raise GuideError(f"番組表の取得に失敗しました ({url}): {type(exc).__name__}: {exc}") from exc
 
