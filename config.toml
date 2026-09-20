@@ -1,0 +1,19 @@
+# radiru-dlp 番組設定
+#
+# [[programs]] を番組ごとに追加してください。
+#   key         : record.py / crontab から参照する識別子（一意）
+#   name        : 番組名（ログ表示用）
+#   station_url : radiko.jpのライブページURL（例: https://radiko.jp/#!/live/JOAK-FM）
+#   duration    : 録音時間 "HH:MM:SS"
+#   output_dir  : 保存先ディレクトリ
+#   filename    : 出力ファイル名テンプレート（{date}, {key} が使用可能）
+#   schedule    : cron形式のスケジュール（manage_cron.pyで使用。省略可）
+
+[[programs]]
+key = "gendai_no_ongaku"
+name = "現代の音楽"
+station_url = "https://radiko.jp/#!/live/JOAK-FM"
+duration = "00:51:00"
+schedule = "10 8 * * 0"
+output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
+filename = "{date}_gendai_no_ongaku.m4a"

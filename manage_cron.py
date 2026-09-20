@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""config.tomlのschedule定義からcrontabのエントリを生成・反映する。"""
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+from radiru_dlp.config import Config, ConfigError, load_config
+
+DEFAULT_CONFIG = Path(__file__).resolve().parent / "config.toml"
+MARKER_BEGIN = "# BEGIN radiru-dlp (auto-generated, do not edit)"
+MARKER_END = "# END radiru-dlp"
+
+
+def build_block(config: Config, python: str, record_script: Path, config_path: Path) -> str:
+    lines = [MARKER_BEGIN]
+    for program in config.programs.values():
+        if not program.schedule:
+            continue
+        lines.append(
+            f"{program.schedule} {python} {record_script} --config {config_path} {program.key}"
+        )
+    lines.append(MARKER_END)
+    return "\n".join(lines) + "\n"
+
+
+def current_crontab() -> str:
+    result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+    if result.returncode != 0:
+        return ""
+    return result.stdout
+
+
+def merge_crontab(existing: str, block: str) -> str:
+    lines = existing.splitlines()
+    if MARKER_BEGIN in lines:
+        start = lines.index(MARKER_BEGIN)
+        end = lines.index(MARKER_END) + 1
+        lines = lines[:start] + block.splitlines() + lines[end:]
+    else:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.extend(block.splitlines())
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--python", default=sys.executable)
+    parser.add_argument("--apply", action="store_true", help="実際にcrontabへ反映する（省略時は表示のみ）")
+    args = parser.parse_args(argv)
+
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        print(f"設定エラー: {exc}", file=sys.stderr)
+        return 1
+
+    record_script = Path(__file__).resolve().parent / "record.py"
+    block = build_block(config, args.python, record_script, args.config.resolve())
+    new_crontab = merge_crontab(current_crontab(), block)
+
+    if not args.apply:
+        print(new_crontab, end="")
+        print("\n--apply を付けて実行すると上記をcrontabへ反映します", file=sys.stderr)
+        return 0
+
+    subprocess.run(["crontab", "-"], input=new_crontab, text=True, check=True)
+    print("crontabを更新しました")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
