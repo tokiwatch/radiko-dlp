@@ -19,11 +19,11 @@ Each program is described once in `config.toml`. At recording time the tool look
 ## Requirements
 
 - Python 3.11 or later (uses the standard-library `tomllib`)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (expected at `/usr/bin/yt-dlp`)
-- ffmpeg (expected at `/usr/bin/ffmpeg`)
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (default path: `/usr/bin/yt-dlp`)
+- ffmpeg (default path: `/usr/bin/ffmpeg`)
 - cron (`crontab` command), only if you want scheduled recording
 
-If yt-dlp or ffmpeg are installed elsewhere, pass `--yt-dlp` / `--ffmpeg` to `radiko-record`.
+If yt-dlp or ffmpeg are installed elsewhere, set their paths in `[tools]` of `config.toml` (see [Tool paths](#tool-paths)) or pass `--yt-dlp` / `--ffmpeg` to `radiko-record`.
 
 ## Quick start
 
@@ -31,13 +31,14 @@ If yt-dlp or ffmpeg are installed elsewhere, pass `--yt-dlp` / `--ffmpeg` to `ra
 git clone https://github.com/tokiwatch/radiko-dlp.git
 cd radiko-dlp
 
-# 1. Edit config.toml (see "Configuration")
+# 1. Create your own config from the template, then edit it (see "Configuration")
+cp config.example.toml config.toml
 
 # 2. Check what would happen (fetches the guide, records nothing)
-./radiko-record gendai_no_ongaku --dry-run
+./radiko-record sample_program --dry-run
 
 # 3. Record once by hand
-./radiko-record gendai_no_ongaku
+./radiko-record sample_program
 
 # 4. Preview the crontab lines, then register them
 ./manage_cron.py
@@ -48,16 +49,16 @@ cd radiko-dlp
 
 ## Configuration
 
-Programs are defined in `config.toml`. Add one `[[programs]]` block (double brackets) per program.
+Programs are defined in `config.toml`. Create it by copying the template (`cp config.example.toml config.toml`); it is your personal file and is not tracked by git. Add one `[[programs]]` block (double brackets) per program.
 
 ```toml
 [[programs]]
-key = "gendai_no_ongaku"
-name = "現代の音楽"
+key = "sample_program"
+name = "Sample Program"
 station_url = "https://radiko.jp/#!/live/JOAK-FM"
 duration = "00:51:00"
 schedule = "10 8 * * 0"
-output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
+output_dir = "~/Music/radiko/sample_program"
 filename = "{date}_{title}.m4a"
 ```
 
@@ -74,7 +75,23 @@ filename = "{date}_{title}.m4a"
 
 Notes on TOML: strings must be quoted, `#` starts a comment, and `key` must be unique.
 
-`config.toml` also contains commented-out samples (NHK R1, NHK FM via らじる★らじる, TBS, 文化放送, ニッポン放送, 吹奏楽のひびき, サンデー・ソングブック). Remove the leading `# ` to use one.
+The template `config.example.toml` also contains commented-out samples (NHK R1, NHK FM via らじる★らじる, TBS, 文化放送, ニッポン放送, 吹奏楽のひびき, サンデー・ソングブック). Copy one into your `config.toml` and remove the leading `# `.
+
+### Tool paths
+
+The locations of `yt-dlp` and `ffmpeg` can be set in an optional `[tools]` table. Both entries are optional.
+
+```toml
+[tools]
+yt_dlp = "/usr/local/bin/yt-dlp"
+ffmpeg = "/usr/bin/ffmpeg"
+```
+
+- Defaults: `/usr/bin/yt-dlp` and `/usr/bin/ffmpeg`.
+- A bare command name (`"yt-dlp"`) is looked up on `PATH`; `~` is expanded. Cron runs with a minimal `PATH`, so absolute paths are the safer choice for scheduled recording.
+- Priority: `--yt-dlp` / `--ffmpeg` on the command line, then `[tools]`, then the defaults.
+- The configured `ffmpeg` is used both for recording and for writing the tags.
+- If a tool cannot be found or is not executable, `radiko-record` stops with a configuration error (exit code `1`). `--dry-run` performs the same check.
 
 ### Cron schedule cheat sheet
 
@@ -107,7 +124,7 @@ If the guide cannot be fetched, a warning is logged and recording continues: `{t
 
 ```
 # BEGIN radiko-dlp (auto-generated, do not edit)
-10 8 * * 0 /home/tokiwa/Development/radiko-dlp/radiko-record --config /home/tokiwa/Development/radiko-dlp/config.toml gendai_no_ongaku
+10 8 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml sample_program
 # END radiko-dlp
 ```
 
@@ -150,7 +167,7 @@ For other areas, open the station on radiko and copy the ID from the URL (`https
 | --- | --- |
 | `key` | The `key` of a program in `config.toml` |
 | `--config` | Path to the config file (default: `config.toml` next to the script) |
-| `--yt-dlp`, `--ffmpeg` | Paths to the executables (defaults: `/usr/bin/yt-dlp`, `/usr/bin/ffmpeg`) |
+| `--yt-dlp`, `--ffmpeg` | Paths to the executables. They override `[tools]` in `config.toml` (default: `/usr/bin/yt-dlp`, `/usr/bin/ffmpeg`) |
 | `--dry-run` | Check the station, fetch the guide, and print the command and the tags. Records nothing and creates no files |
 
 Logs are appended to `<output_dir>/logs/<key>.log`. Warnings and errors are also printed to stderr.
@@ -181,6 +198,7 @@ Messages printed by the tool (and written to the log) are in Japanese.
 | `警告: 番組表を利用できないため...` ("program guide unavailable") | The guide could not be fetched. The recording still runs, with `name` used as the title |
 | Wrong episode in the title | Check `schedule` matches the start time, and that `duration` is close to the program length |
 | `yt-dlp` fails | See `<output_dir>/logs/<key>.log`. Update yt-dlp: radiko changes can break older versions |
+| `yt-dlp が見つからないか実行できません` ("yt-dlp not found or not executable"; same for ffmpeg) | Fix the path in `[tools]` of `config.toml`, or pass `--yt-dlp` / `--ffmpeg` |
 | Nothing was recorded by cron | `crontab -l` shows the block; the machine was on; the log exists. Try the exact crontab command by hand |
 | `未知のプレースホルダー` ("unknown placeholder") in `filename` | Only `{date}`, `{key}` and `{title}` are available |
 
@@ -189,7 +207,8 @@ Messages printed by the tool (and written to the log) are in Japanese.
 ```
 radiko-record        recording command (executable script)
 manage_cron.py       crontab generator
-config.toml          program definitions
+config.example.toml  template for config.toml
+config.toml          your program definitions (not tracked by git)
 radiko_dlp/
   config.py          config loading and validation
   guide.py           program guide lookup and filename sanitizing

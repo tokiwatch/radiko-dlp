@@ -19,11 +19,11 @@
 ## 必要なもの
 
 - Python 3.11 以上（標準ライブラリの `tomllib` を使用）
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp)（`/usr/bin/yt-dlp` にあること）
-- ffmpeg（`/usr/bin/ffmpeg` にあること）
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp)（既定のパス: `/usr/bin/yt-dlp`）
+- ffmpeg（既定のパス: `/usr/bin/ffmpeg`）
 - cron（`crontab` コマンド）。スケジュール録音をする場合のみ
 
-yt-dlp や ffmpeg が別の場所にある場合は、`radiko-record` に `--yt-dlp` / `--ffmpeg` で指定します。
+yt-dlp や ffmpeg が別の場所にある場合は、`config.toml` の `[tools]` に書く（[ツールのパス](#ツールのパス)を参照）か、`radiko-record` に `--yt-dlp` / `--ffmpeg` で指定します。
 
 ## クイックスタート
 
@@ -31,13 +31,14 @@ yt-dlp や ffmpeg が別の場所にある場合は、`radiko-record` に `--yt-
 git clone https://github.com/tokiwatch/radiko-dlp.git
 cd radiko-dlp
 
-# 1. config.toml を編集する（「設定」を参照）
+# 1. ひな形から自分用の設定を作り、編集する（「設定」を参照）
+cp config.example.toml config.toml
 
 # 2. 動作を確認する（番組表は取得するが、録音はしない）
-./radiko-record gendai_no_ongaku --dry-run
+./radiko-record sample_program --dry-run
 
 # 3. 手動で 1 回録音する
-./radiko-record gendai_no_ongaku
+./radiko-record sample_program
 
 # 4. crontab の内容をプレビューし、反映する
 ./manage_cron.py
@@ -48,16 +49,16 @@ cd radiko-dlp
 
 ## 設定
 
-番組は `config.toml` に書きます。番組ごとに `[[programs]]`（角括弧が 2 つ）のブロックを 1 つ追加します。
+番組は `config.toml` に書きます。ひな形をコピーして作成してください（`cp config.example.toml config.toml`）。`config.toml` は個人用のファイルで、git では管理されません。番組ごとに `[[programs]]`（角括弧が 2 つ）のブロックを 1 つ追加します。
 
 ```toml
 [[programs]]
-key = "gendai_no_ongaku"
-name = "現代の音楽"
+key = "sample_program"
+name = "サンプル番組"
 station_url = "https://radiko.jp/#!/live/JOAK-FM"
 duration = "00:51:00"
 schedule = "10 8 * * 0"
-output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
+output_dir = "~/Music/radiko/sample_program"
 filename = "{date}_{title}.m4a"
 ```
 
@@ -74,7 +75,23 @@ filename = "{date}_{title}.m4a"
 
 TOML の注意点: 文字列は必ず `"` で囲みます。`#` から行末まではコメントです。`key` は重複させないでください。
 
-`config.toml` には、コメントアウトしたサンプル（NHK ラジオ第1、らじる★らじる 経由の NHK FM、TBS、文化放送、ニッポン放送、吹奏楽のひびき、サンデー・ソングブック）も入っています。使うときは先頭の `# ` を外してください。
+ひな形の `config.example.toml` には、コメントアウトしたサンプル（NHK ラジオ第1、らじる★らじる 経由の NHK FM、TBS、文化放送、ニッポン放送、吹奏楽のひびき、サンデー・ソングブック）も入っています。自分の `config.toml` にコピーし、先頭の `# ` を外して使ってください。
+
+### ツールのパス
+
+`yt-dlp` と `ffmpeg` の場所は、省略可能な `[tools]` テーブルで指定できます。どちらの項目も省略できます。
+
+```toml
+[tools]
+yt_dlp = "/usr/local/bin/yt-dlp"
+ffmpeg = "/usr/bin/ffmpeg"
+```
+
+- 既定値は `/usr/bin/yt-dlp` と `/usr/bin/ffmpeg` です。
+- コマンド名だけ（`"yt-dlp"`）を書くと `PATH` から探します。`~` は展開されます。cron の `PATH` は最小限なので、定期実行では絶対パスで書くのが確実です。
+- 優先順位は、コマンドラインの `--yt-dlp` / `--ffmpeg`、`[tools]`、既定値の順です。
+- 設定した `ffmpeg` は、録音とタグの書き込みの両方に使われます。
+- 見つからない、または実行できない場合、`radiko-record` は設定エラー（終了コード `1`）で止まります。`--dry-run` でも同じ確認をします。
 
 ### cron の書き方（早見表）
 
@@ -107,7 +124,7 @@ TOML の注意点: 文字列は必ず `"` で囲みます。`#` から行末ま�
 
 ```
 # BEGIN radiko-dlp (auto-generated, do not edit)
-10 8 * * 0 /home/tokiwa/Development/radiko-dlp/radiko-record --config /home/tokiwa/Development/radiko-dlp/config.toml gendai_no_ongaku
+10 8 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml sample_program
 # END radiko-dlp
 ```
 
@@ -150,7 +167,7 @@ TOML の注意点: 文字列は必ず `"` で囲みます。`#` から行末ま�
 | --- | --- |
 | `key` | `config.toml` の番組の `key` |
 | `--config` | 設定ファイルのパス（省略時はスクリプトと同じ場所の `config.toml`） |
-| `--yt-dlp`、`--ffmpeg` | 実行ファイルのパス（既定: `/usr/bin/yt-dlp`、`/usr/bin/ffmpeg`） |
+| `--yt-dlp`、`--ffmpeg` | 実行ファイルのパス。`config.toml` の `[tools]` より優先される（既定: `/usr/bin/yt-dlp`、`/usr/bin/ffmpeg`） |
 | `--dry-run` | 局を確認し、番組表を取得して、実行コマンドとタグを表示する。録音せず、ファイルも作らない |
 
 ログは `<output_dir>/logs/<key>.log` に追記されます。警告とエラーは標準エラー出力にも表示されます。
@@ -179,6 +196,7 @@ TOML の注意点: 文字列は必ず `"` で囲みます。`#` から行末ま�
 | `警告: 番組表を利用できないため...` | 番組表を取得できませんでした。録音は行われ、タイトルには `name` が使われます |
 | タイトルが別の回になる | `schedule` が開始時刻と合っているか、`duration` が番組の長さに近いかを確認します |
 | `yt-dlp` が失敗する | `<output_dir>/logs/<key>.log` を確認します。yt-dlp を更新してください（radiko の仕様変更で古い版が動かなくなることがあります） |
+| `yt-dlp が見つからないか実行できません`（ffmpeg も同様） | `config.toml` の `[tools]` のパスを直すか、`--yt-dlp` / `--ffmpeg` で指定します |
 | cron で録音されなかった | `crontab -l` にブロックがあるか、マシンが起動していたか、ログがあるかを確認し、crontab と同じコマンドを手で実行します |
 | `filename` の `未知のプレースホルダー` | 使えるのは `{date}`、`{key}`、`{title}` だけです |
 
@@ -187,7 +205,8 @@ TOML の注意点: 文字列は必ず `"` で囲みます。`#` から行末ま�
 ```
 radiko-record        録音コマンド（実行ファイル）
 manage_cron.py       crontab の生成
-config.toml          番組の定義
+config.example.toml  config.toml のひな形
+config.toml          自分用の番組定義（git 管理外）
 radiko_dlp/
   config.py          設定の読み込みと検証
   guide.py           番組表の取得とファイル名の整形

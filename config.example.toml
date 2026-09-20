@@ -1,4 +1,7 @@
-# radiko-dlp 番組設定
+# radiko-dlp 設定ファイルのひな形
+#
+# このファイルを config.toml にコピーして編集してください（config.toml は git 管理外です）:
+#   cp config.example.toml config.toml
 #
 # [[programs]] を番組ごとに追加してください。
 #   key         : radiko-record / crontab から参照する識別子（一意）
@@ -11,13 +14,19 @@
 #   station_id  : 番組表の局ID（省略時はstation_urlの /live/ 以降から取得）
 #   schedule    : cron形式のスケジュール（manage_cron.pyで使用。省略可）
 
+# yt-dlp / ffmpeg のパス（省略可。省略時は /usr/bin/yt-dlp と /usr/bin/ffmpeg）
+# コマンド名だけ（"yt-dlp"）を書くとPATHから探します。radiko-record の --yt-dlp / --ffmpeg が優先されます。
+# [tools]
+# yt_dlp = "/usr/local/bin/yt-dlp"
+# ffmpeg = "/usr/bin/ffmpeg"
+
 [[programs]]
-key = "gendai_no_ongaku"
-name = "現代の音楽"
+key = "sample_program"
+name = "Sample Program"
 station_url = "https://radiko.jp/#!/live/JOAK-FM"
 duration = "00:51:00"
-schedule = "10 8 * * 0"
-output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
+schedule = "10 8 * * 0"            # 毎週日曜 08:10
+output_dir = "~/Music/radiko/sample_program"
 filename = "{date}_{title}.m4a"
 
 # ---------------------------------------------------------------------------

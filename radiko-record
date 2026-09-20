@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from radiko_dlp.config import ConfigError, Program, load_config
+from radiko_dlp.config import ConfigError, Program, load_config, resolve_tool
 from radiko_dlp.guide import (
     JST,
     GuideError,
@@ -28,7 +28,9 @@ EXIT_STATION_UNAVAILABLE = 2
 def build_command(ffmpeg_path: str, yt_dlp_path: str, program: Program, output_path: Path) -> list[str]:
     return [
         yt_dlp_path,
-        "--downloader", ffmpeg_path,
+        # --downloaderは種類の指定のみ。実際に使うffmpegは--ffmpeg-locationで渡す
+        "--downloader", "ffmpeg",
+        "--ffmpeg-location", ffmpeg_path,
         "--downloader-args",
         f"ffmpeg_i:-t {program.duration} -seekable 0 -http_seekable 0",
         program.station_url,
@@ -87,14 +89,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("key", help="config.toml内のprogramsで指定したkey")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="設定ファイルのパス")
-    parser.add_argument("--yt-dlp", default="/usr/bin/yt-dlp")
-    parser.add_argument("--ffmpeg", default="/usr/bin/ffmpeg")
+    parser.add_argument("--yt-dlp", help="yt-dlpのパス（config.tomlの[tools]より優先）")
+    parser.add_argument("--ffmpeg", help="ffmpegのパス（config.tomlの[tools]より優先）")
     parser.add_argument("--dry-run", action="store_true", help="番組表を取得してコマンドとタグを表示するだけで録音しない")
     args = parser.parse_args(argv)
 
     start = datetime.now(JST)
     try:
-        program = load_config(args.config).get(args.key)
+        config = load_config(args.config)
+        program = config.get(args.key)
+        yt_dlp = resolve_tool("yt-dlp", args.yt_dlp or config.yt_dlp)
+        ffmpeg = resolve_tool("ffmpeg", args.ffmpeg or config.ffmpeg)
     except ConfigError as exc:
         print(f"設定エラー: {exc}", file=sys.stderr)
         return 1
@@ -134,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     tags = build_tags(program, info, start)
-    command = build_command(args.ffmpeg, args.yt_dlp, program, output_path)
+    command = build_command(ffmpeg, yt_dlp, program, output_path)
 
     if args.dry_run:
         print(shlex.join(command))
@@ -151,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
 
     logging.info("録音完了: %s", output_path)
     try:
-        embed_metadata(args.ffmpeg, output_path, tags)
+        embed_metadata(ffmpeg, output_path, tags)
         logging.info("メタデータを記録しました: %s", tags.get("title"))
     except RuntimeError as exc:
         logging.error("メタデータの記録に失敗しました（録音ファイルは保持）: %s", exc)

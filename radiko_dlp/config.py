@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,9 +28,16 @@ class Program:
         return hours * 3600 + minutes * 60 + seconds
 
 
+DEFAULT_YT_DLP = "/usr/bin/yt-dlp"
+DEFAULT_FFMPEG = "/usr/bin/ffmpeg"
+TOOL_KEYS = ("yt_dlp", "ffmpeg")
+
+
 @dataclass(frozen=True)
 class Config:
     programs: dict[str, Program]
+    yt_dlp: str = DEFAULT_YT_DLP
+    ffmpeg: str = DEFAULT_FFMPEG
 
     def get(self, key: str) -> Program:
         try:
@@ -42,12 +51,41 @@ class Config:
 REQUIRED_FIELDS = ("key", "name", "station_url", "duration", "output_dir")
 
 
+def resolve_tool(option: str, configured: str) -> str:
+    """設定されたパス（またはPATH上のコマンド名）を実行可能ファイルの絶対パスに解決する。"""
+    found = shutil.which(os.path.expanduser(configured))
+    if not found:
+        raise ConfigError(
+            f"{option} が見つからないか実行できません: {configured}"
+            f"（config.toml の [tools] または --{option} でパスを指定してください）"
+        )
+    return found
+
+
+def _load_tools(data: dict) -> dict[str, str]:
+    tools = data.get("tools", {})
+    if not isinstance(tools, dict):
+        raise ConfigError("[tools] はテーブルで指定してください")
+    unknown = sorted(set(tools) - set(TOOL_KEYS))
+    if unknown:
+        raise ConfigError(f"[tools] に未知の項目があります: {unknown}（使えるのは {list(TOOL_KEYS)}）")
+    for key, value in tools.items():
+        if not isinstance(value, str) or not value.strip():
+            raise ConfigError(f"[tools] の {key} は空でない文字列で指定してください: {value!r}")
+    return {key: os.path.expanduser(value) for key, value in tools.items()}
+
+
 def load_config(path: Path) -> Config:
     if not path.exists():
-        raise ConfigError(f"設定ファイルが見つかりません: {path}")
+        raise ConfigError(
+            f"設定ファイルが見つかりません: {path}（config.example.toml をコピーして作成できます）"
+        )
 
-    with path.open("rb") as f:
-        data = tomllib.load(f)
+    try:
+        with path.open("rb") as f:
+            data = tomllib.load(f)
+    except tomllib.TOMLDecodeError as exc:
+        raise ConfigError(f"設定ファイルの書式が正しくありません ({path}): {exc}") from None
 
     programs: dict[str, Program] = {}
     for entry in data.get("programs", []):
@@ -77,4 +115,4 @@ def load_config(path: Path) -> Config:
     if not programs:
         raise ConfigError("programsが1件も定義されていません")
 
-    return Config(programs=programs)
+    return Config(programs=programs, **_load_tools(data))
