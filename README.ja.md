@@ -43,8 +43,8 @@ cp config.example.toml config.toml
 ./radiko-record sample_program --dry-run
 ./radiko-record sample_program --test
 
-# 4. crontab の内容をプレビューし、反映する
-./radiko-cron
+# 4. crontab に何が書き込まれるかをプレビューし（変更しない）、反映する
+./radiko-cron --dry-run
 ./radiko-cron --apply
 ```
 
@@ -201,10 +201,10 @@ ffmpeg = "/usr/bin/ffmpeg"
 詳しくは [radiko-cron マニュアル](docs/radiko-cron.ja.md)を参照してください。
 
 ```
-./radiko-cron [--config CONFIG] [--apply] [--force]
+./radiko-cron [--config CONFIG] [--dry-run] [--apply] [--force]
 ```
 
-`--apply` を付けないと、反映後の crontab を表示するだけです。`--apply` を付けると実際に反映します。
+`--dry-run` は、crontab に書き込まれる内容（管理ブロックと、現在の crontab との差分）を表示するだけで、何も変更しません。`--apply` を付けない場合も同じ動作で、`--apply` を付け（`--dry-run` は付けない）ると実際に反映します。
 
 管理ブロックには、どの設定ファイルから生成したかが記録されます（`# config:` の行）。別の設定ファイル（例: `sample.toml`）で `--apply` を実行すると、`--force` を付けない限り拒否されます。別のファイルを試して、本番の予約が消えてしまうことはありません。
 

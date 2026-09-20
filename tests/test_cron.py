@@ -31,6 +31,25 @@ output_dir = "/tmp/x"
 """
 
 
+def run_main_full(existing, *args: str, run_error=None):
+    """run_main と同じだが、標準出力も含めて辞書で返す。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        config = Path(tmp) / "config.toml"
+        config.write_text(CONFIG)
+        if callable(existing):
+            existing = existing(str(config.resolve()))
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with mock.patch.object(radiko_cron, "current_crontab", return_value=existing), \
+                mock.patch.object(radiko_cron.subprocess, "run", side_effect=run_error) as run, \
+                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = radiko_cron.main(["--config", str(config), *args])
+        return {
+            "code": code, "stdout": stdout.getvalue(), "stderr": stderr.getvalue(),
+            "written": run.call_args.kwargs["input"] if run.called else None,
+            "config": str(config.resolve()),
+        }
+
+
 def run_main(existing, *args: str, run_error=None):
     """実際のcrontabには触れず、(終了コード, 書き込まれた内容 or None, stderr, 設定ファイルのパス) を返す。
 
@@ -129,6 +148,51 @@ class ErrorHandlingTest(unittest.TestCase):
         code, _, stderr, _ = run_main("", "--apply", run_error=error)
         self.assertEqual(code, 1)
         self.assertIn("schedule", stderr)
+
+
+class DryRunTest(unittest.TestCase):
+    def test_dry_run_shows_block_and_diff_and_writes_nothing(self):
+        result = run_main_full("0 3 * * * /usr/bin/backup\n", "--dry-run")
+        self.assertEqual(result["code"], 0)
+        self.assertIsNone(result["written"])
+        out = result["stdout"]
+        self.assertIn("予約 1 件", out)
+        self.assertIn(radiko_cron.MARKER_BEGIN, out)
+        self.assertIn("0 12 * * 1 ", out)
+        self.assertIn("+# BEGIN radiko-dlp", out)
+        self.assertNotIn("-0 3 * * * /usr/bin/backup", out)
+
+    def test_dry_run_takes_precedence_over_apply(self):
+        result = run_main_full("", "--apply", "--dry-run")
+        self.assertEqual(result["code"], 0)
+        self.assertIsNone(result["written"])
+
+    def test_dry_run_reports_no_difference_when_already_registered(self):
+        def existing(config):
+            block = radiko_cron.build_block(
+                radiko_cron.load_config(Path(config)),
+                Path(radiko_cron.__file__).resolve().parent / "radiko-record", Path(config))
+            return block
+        result = run_main_full(existing, "--dry-run")
+        self.assertIn("差分: なし", result["stdout"])
+        self.assertNotIn("+++", result["stdout"])
+
+    def test_dry_run_shows_changed_line(self):
+        def existing(config):
+            return (f"{radiko_cron.MARKER_BEGIN}\n# config: {config}\n"
+                    f"0 9 * * 1 /old/radiko-record --config {config} k\n{radiko_cron.MARKER_END}\n")
+        out = run_main_full(existing, "--dry-run")["stdout"]
+        self.assertIn("-0 9 * * 1 /old/radiko-record", out)
+        self.assertIn("+0 12 * * 1 ", out)
+
+    def test_dry_run_with_other_config_only_warns(self):
+        other = (f"{radiko_cron.MARKER_BEGIN}\n# config: /other/config.toml\n0 1 * * * x\n"
+                 f"{radiko_cron.MARKER_END}\n")
+        result = run_main_full(other, "--apply", "--dry-run")
+        self.assertEqual(result["code"], 0)
+        self.assertIsNone(result["written"])
+        self.assertIn("警告", result["stderr"])
+        self.assertIn("-0 1 * * * x", result["stdout"])
 
 
 if __name__ == "__main__":

@@ -43,8 +43,8 @@ cp config.example.toml config.toml
 ./radiko-record sample_program --dry-run
 ./radiko-record sample_program --test
 
-# 4. Preview the crontab lines, then register them
-./radiko-cron
+# 4. Preview what would be written to the crontab (changes nothing), then register it
+./radiko-cron --dry-run
 ./radiko-cron --apply
 ```
 
@@ -201,10 +201,10 @@ Exit codes:
 See the [radiko-cron manual](docs/radiko-cron.md) for details.
 
 ```
-./radiko-cron [--config CONFIG] [--apply] [--force]
+./radiko-cron [--config CONFIG] [--dry-run] [--apply] [--force]
 ```
 
-Without `--apply` it only prints the resulting crontab. With `--apply` it installs it.
+`--dry-run` shows what would be written to the crontab (the managed block and a diff against the current crontab) and changes nothing. Without `--apply` it behaves the same way; with `--apply` (and without `--dry-run`) it installs the result.
 
 The managed block records which config file it was generated from (the `# config:` line). Running `--apply` with a different config file (for example `sample.toml`) is refused unless you add `--force`, so trying another file cannot wipe your real schedule.
 

@@ -7,21 +7,22 @@
 ## 書式
 
 ```
-./radiko-cron [--config CONFIG] [--apply] [--force]
+./radiko-cron [--config CONFIG] [--dry-run] [--apply] [--force]
 ```
 
 | オプション | 内容 |
 | --- | --- |
 | `--config CONFIG` | 読み込む設定ファイル（省略時はスクリプトと同じ場所の `config.toml`） |
-| `--apply` | 結果を実際に crontab へ反映する。付けない場合は、反映後の crontab を**表示するだけ**で、何も変更しない |
+| `--dry-run` | crontab に書き込まれる内容（管理ブロックと、現在の crontab との差分）を表示するだけで、何も変更しない。`--apply` と同時に指定した場合は、こちらが優先される |
+| `--apply` | 結果を実際に crontab へ反映する。付けない場合は、`--dry-run` と同じ動作で、何も変更しない |
 | `--force` | 別の設定ファイルから登録済みのブロックを、`--apply` で置き換えることを許可する（[保護の仕組み](#保護の仕組み)を参照） |
 
 ## 基本の流れ
 
 ```sh
 # 1. config.toml の番組と schedule を書く（編集する）
-# 2. プレビュー: 反映後の crontab 全体を表示する。何も変更しない
-./radiko-cron
+# 2. 何が書き込まれるかをプレビューする（「--dry-run でのプレビュー」を参照）。何も変更しない
+./radiko-cron --dry-run
 
 # 3. 反映する
 ./radiko-cron --apply
@@ -31,6 +32,38 @@ crontab -l
 ```
 
 変更されるのは、実行したユーザー自身の crontab だけです。root 権限は不要です。
+
+## `--dry-run` でのプレビュー
+
+`./radiko-cron --dry-run` は、crontab を一切変更しません。書き込まれる管理ブロック、その予約の件数、現在の crontab との差分（unified diff）を表示するので、どの行が追加・変更・削除されるのかを、事前に確認できます。
+
+```
+crontabは変更しません（表示のみ）。反映すると、次の管理ブロックが書き込まれます（予約 2 件）:
+
+# BEGIN radiko-dlp (auto-generated, do not edit)
+# config: /home/user/radiko-dlp/config.toml
+10 8 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml gendai_no_ongaku
+5 16 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml suisogaku_no_hibiki
+# END radiko-dlp
+
+現在のcrontabとの差分:
+--- 現在のcrontab
++++ 反映後のcrontab
+@@ -3,5 +3,5 @@
+ # BEGIN radiko-dlp (auto-generated, do not edit)
+ # config: /home/user/radiko-dlp/config.toml
+ 10 8 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml gendai_no_ongaku
+-0 16 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml suisogaku_no_hibiki
++5 16 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml suisogaku_no_hibiki
+ # END radiko-dlp
+
+実際に反映するには、--dry-run を付けずに --apply を付けて実行してください。
+```
+
+- `-` で始まる行は消え、`+` で始まる行は追加されます。それ以外は、変更されない前後の行です。
+- 何も変わらない場合、差分の部分には `差分: なし` と表示されます。
+- crontab に別の設定ファイルから登録されたブロックがあると、警告も表示されます（[保護の仕組み](#保護の仕組み)を参照）。
+- `--apply` と同時に指定しても `--dry-run` が優先されるので、これから実行するコマンドに付け足しても安全です。
 
 ## crontab に書かれる内容
 
@@ -76,7 +109,7 @@ crontab -l
 
 ## 保護の仕組み
 
-- **既定はプレビュー。** `--apply` を付けない限り、何も反映されません。
+- **既定はプレビュー。** `--apply` を付けない限り何も反映されず、`--dry-run` を付けると必ず反映されません。
 - **別の設定ファイルは拒否。** crontab の管理ブロックは 1 つだけです。別の設定ファイルから生成されたブロックがあるとき、`--apply` は置き換えずに止まります。
 
   ```
@@ -84,7 +117,7 @@ crontab -l
   置き換えてよい場合は --force を付けてください。
   ```
 
-  `sample.toml` のような別のファイルを試したときに、本番の予約が消えるのを防ぎます。本当に置き換えたいときだけ `--force` を付けてください。プレビュー（`--apply` なし）では、同じ内容が警告として表示されます。
+  `sample.toml` のような別のファイルを試したときに、本番の予約が消えるのを防ぎます。本当に置き換えたいときだけ `--force` を付けてください。プレビュー（`--dry-run`、または `--apply` なし）では、同じ内容が警告として表示されます。
 - **壊れたブロックの検出。** `# END radiko-dlp` の行がない場合（手で消したときなど）は、エラーで止まり、何も変更しません。`crontab -e` で修正してください。
 - **不正な schedule は cron が拒否。** `schedule` が cron の書式として正しくないと、`crontab` コマンドがファイル全体を受け付けません。その場合は、crontab が更新されなかったことを表示します。既存の crontab はそのままです。
 

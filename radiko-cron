@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import subprocess
 import sys
 from pathlib import Path
@@ -69,12 +70,32 @@ def merge_crontab(existing: str, block: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def format_preview(existing: str, new_crontab: str, block: str) -> str:
+    """反映すると何が書き込まれるか（管理ブロックと現在のcrontabとの差分）を表示用にまとめる。"""
+    entries = [line for line in block.splitlines() if line and not line.startswith("#")]
+    diff = list(difflib.unified_diff(
+        existing.splitlines(), new_crontab.splitlines(),
+        "現在のcrontab", "反映後のcrontab", lineterm="",
+    ))
+    lines = [
+        f"crontabは変更しません（表示のみ）。反映すると、次の管理ブロックが書き込まれます（予約 {len(entries)} 件）:",
+        "",
+        block.rstrip("\n"),
+        "",
+    ]
+    lines += ["現在のcrontabとの差分:", *diff] if diff else ["現在のcrontabとの差分: なし（登録済みの内容と同じです）"]
+    lines += ["", "実際に反映するには、--dry-run を付けずに --apply を付けて実行してください。"]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--force", action="store_true", help="別の設定ファイルから登録済みの内容も上書きする")
     parser.add_argument("--apply", action="store_true", help="実際にcrontabへ反映する（省略時は表示のみ）")
+    parser.add_argument("--dry-run", action="store_true", help="書き込まれる内容と現在のcrontabとの差分を表示するだけで、変更しない（--apply より優先）")
     args = parser.parse_args(argv)
+    apply = args.apply and not args.dry_run
 
     try:
         config = load_config(args.config)
@@ -92,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
             f"crontabには別の設定ファイル（{registered}）から登録された内容があります。"
             f"{config_path} の内容で置き換わります。"
         )
-        if args.apply and not args.force:
+        if apply and not args.force:
             print(f"エラー: {message}\n置き換えてよい場合は --force を付けてください。", file=sys.stderr)
             return 1
         print(f"警告: {message}", file=sys.stderr)
@@ -102,9 +123,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
 
-    if not args.apply:
-        print(new_crontab, end="")
-        print("\n--apply を付けて実行すると上記をcrontabへ反映します", file=sys.stderr)
+    if not apply:
+        print(format_preview(existing, new_crontab, block))
         return 0
 
     try:
