@@ -19,3 +19,84 @@ duration = "00:51:00"
 schedule = "10 8 * * 0"
 output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
 filename = "{date}_{title}.m4a"
+
+# ---------------------------------------------------------------------------
+# 以下はサンプルです。使うときは先頭の「# 」を外し、番組に合わせて書き換えてください。
+# 追加・変更したあと schedule を反映するには: python3 manage_cron.py --apply
+# ---------------------------------------------------------------------------
+
+# 【radiko: NHK-FM「吹奏楽のひびき」】局ID: JOAK-FM
+# 日曜 16:00-16:50（2026-09-20時点の番組表より。編成で変わるため放送時刻は要確認）
+# [[programs]]
+# key = "suisogaku_no_hibiki"
+# name = "吹奏楽のひびき"
+# station_url = "https://radiko.jp/#!/live/JOAK-FM"
+# duration = "00:51:00"
+# schedule = "0 16 * * 0"            # 毎週日曜 16:00
+# output_dir = "~/Music/NHK/suisogaku_no_hibiki"
+# filename = "{date}_{title}.m4a"
+
+# 【radiko: TOKYO FM「山下達郎のサンデー・ソングブック」】局ID: FMT
+# 日曜 14:00-14:55（2026-09-20時点の番組表より。編成で変わるため放送時刻は要確認）
+# [[programs]]
+# key = "sunday_songbook"
+# name = "山下達郎のサンデー・ソングブック"
+# station_url = "https://radiko.jp/#!/live/FMT"
+# duration = "00:56:00"
+# schedule = "0 14 * * 0"            # 毎週日曜 14:00
+# output_dir = "~/Music/radio/sunday_songbook"
+# filename = "{date}_{title}.m4a"
+
+# 【radiko: NHKラジオ第1】局ID: JOAK
+# [[programs]]
+# key = "sample_nhk_r1"
+# name = "サンプル NHKラジオ第1"
+# station_url = "https://radiko.jp/#!/live/JOAK"
+# duration = "00:31:00"
+# schedule = "0 12 * * 1-5"          # 平日 12:00
+# output_dir = "~/Music/NHK/sample_nhk_r1"
+# filename = "{date}_{title}.m4a"
+
+# 【らじる★らじるを直接録音: NHK FM】
+# station_urlは ch=r1 / ch=fm が使用可（ch=r2 は非対応）。
+# 番組表はradikoから取得するため、station_id にradikoの局IDを指定する。
+# [[programs]]
+# key = "sample_nhk_fm_direct"
+# name = "サンプル NHK-FM（らじる★らじる）"
+# station_url = "https://www.nhk.or.jp/radio/player/?ch=fm"
+# station_id = "JOAK-FM"
+# duration = "00:51:00"
+# schedule = "10 8 * * 0"            # 毎週日曜 08:10
+# output_dir = "~/Music/NHK/sample_nhk_fm_direct"
+# filename = "{date}_{title}.m4a"
+
+# 【radiko: 民放（TBSラジオ）】局ID: TBS
+# 録音できるのは現在のエリア内の局のみ（エリア外はエラーになります）
+# [[programs]]
+# key = "sample_tbs"
+# name = "サンプル TBSラジオ"
+# station_url = "https://radiko.jp/#!/live/TBS"
+# duration = "01:00:00"
+# schedule = "0 13 * * 6"            # 毎週土曜 13:00
+# output_dir = "~/Music/radio/tbs"
+# filename = "{date}_{title}.m4a"
+
+# 【radiko: 文化放送】局ID: QRR
+# [[programs]]
+# key = "sample_qrr"
+# name = "サンプル 文化放送"
+# station_url = "https://radiko.jp/#!/live/QRR"
+# duration = "00:30:00"
+# schedule = "30 7 * * 1-5"          # 平日 07:30
+# output_dir = "~/Music/radio/qrr"
+# filename = "{date}_{title}.m4a"
+
+# 【radiko: ニッポン放送】局ID: LFR
+# [[programs]]
+# key = "sample_lfr"
+# name = "サンプル ニッポン放送"
+# station_url = "https://radiko.jp/#!/live/LFR"
+# duration = "02:00:00"
+# schedule = "0 21 * * 0"            # 毎週日曜 21:00
+# output_dir = "~/Music/radio/lfr"
+# filename = "{date}_{title}.m4a"
