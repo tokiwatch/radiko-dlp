@@ -1,9 +1,11 @@
+import gzip
 import unittest
 from datetime import datetime, timedelta
 
 from radiru_dlp.guide import (
     JST,
     GuideError,
+    decode_body,
     parse_guide,
     pick_program,
     sanitize_filename_part,
@@ -44,6 +46,18 @@ class ParseGuideTest(unittest.TestCase):
 
     def test_description_falls_back_to_desc(self):
         self.assertEqual(parse_guide(SAMPLE_XML)[2].description, "説明のみ")
+
+
+class DecodeBodyTest(unittest.TestCase):
+    def test_plain(self):
+        self.assertEqual(decode_body("現代の音楽".encode()), "現代の音楽")
+
+    def test_gzip(self):
+        self.assertEqual(decode_body(gzip.compress("現代の音楽".encode())), "現代の音楽")
+
+    def test_truncated_gzip_raises(self):
+        with self.assertRaises(EOFError):
+            decode_body(gzip.compress(b"x" * 1000)[:20])
 
 
 class PickProgramTest(unittest.TestCase):

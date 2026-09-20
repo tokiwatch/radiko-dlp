@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import gzip
 import html
 import re
 import unicodedata
-import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -44,6 +44,13 @@ def _clean_text(raw: str | None) -> str:
     return html.unescape(text).strip()
 
 
+def decode_body(body: bytes) -> str:
+    # radikoはAccept-Encodingを指定しなくてもgzipで応答することがある
+    if body[:2] == b"\x1f\x8b":
+        body = gzip.decompress(body)
+    return body.decode("utf-8")
+
+
 def _parse_time(value: str) -> datetime:
     return datetime.strptime(value, "%Y%m%d%H%M%S").replace(tzinfo=JST)
 
@@ -80,9 +87,9 @@ def fetch_program(station_id: str, start: datetime, duration_seconds: int, timeo
     url = GUIDE_URL.format(date=broadcast_date, station=station_id)
     try:
         with urllib.request.urlopen(url, timeout=timeout) as response:
-            programs = parse_guide(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, ET.ParseError) as exc:
-        raise GuideError(f"番組表の取得に失敗しました ({url}): {exc}") from exc
+            programs = parse_guide(decode_body(response.read()))
+    except Exception as exc:  # 番組表は補助情報。どんな失敗でも録音を止めないためGuideErrorに集約する
+        raise GuideError(f"番組表の取得に失敗しました ({url}): {type(exc).__name__}: {exc}") from exc
 
     program = pick_program(programs, start, duration_seconds)
     if program is None:
