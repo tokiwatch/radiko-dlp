@@ -132,6 +132,8 @@ ffmpeg = "/usr/bin/ffmpeg"
 
 ## cron での定期実行
 
+詳しくは [radiko-cron マニュアル](docs/radiko-cron.ja.md)を参照してください。
+
 `radiko-cron` は、`schedule` を持つ**番組ごとに 1 行**を、crontab の管理ブロックに書き込みます。常駐するプログラムを入れるわけではなく、行も短いものです。
 
 ```
@@ -196,6 +198,8 @@ ffmpeg = "/usr/bin/ffmpeg"
 
 ### `radiko-cron`
 
+詳しくは [radiko-cron マニュアル](docs/radiko-cron.ja.md)を参照してください。
+
 ```
 ./radiko-cron [--config CONFIG] [--apply] [--force]
 ```
@@ -228,6 +232,7 @@ radiko_dlp/
   config.py          設定の読み込みと検証
   guide.py           番組表の取得とファイル名の整形
   station.py         局の確認（エリア、NHK ラジオ第2）
+docs/                マニュアル（radiko-cron）
 tests/               単体テスト
 ```
 

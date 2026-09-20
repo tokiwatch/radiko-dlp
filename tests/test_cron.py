@@ -31,7 +31,7 @@ output_dir = "/tmp/x"
 """
 
 
-def run_main(existing, *args: str):
+def run_main(existing, *args: str, run_error=None):
     """実際のcrontabには触れず、(終了コード, 書き込まれた内容 or None, stderr, 設定ファイルのパス) を返す。
 
     existing は crontab の内容、または設定ファイルのパスを受け取ってその内容を返す関数。
@@ -43,7 +43,7 @@ def run_main(existing, *args: str):
             existing = existing(str(config.resolve()))
         stderr = io.StringIO()
         with mock.patch.object(radiko_cron, "current_crontab", return_value=existing), \
-                mock.patch.object(radiko_cron.subprocess, "run") as run, \
+                mock.patch.object(radiko_cron.subprocess, "run", side_effect=run_error) as run, \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
             code = radiko_cron.main(["--config", str(config), *args])
         written = run.call_args.kwargs["input"] if run.called else None
@@ -109,6 +109,26 @@ class ApplyGuardTest(unittest.TestCase):
         code, written, _, _ = run_main("0 3 * * * /usr/bin/backup\n" + self.other_block(), "--apply", "--force")
         self.assertEqual(code, 0)
         self.assertIn("0 3 * * * /usr/bin/backup", written)
+
+
+class ErrorHandlingTest(unittest.TestCase):
+    def test_block_without_end_marker_is_reported(self):
+        broken = f"{radiko_cron.MARKER_BEGIN}\n0 1 * * * x\n"
+        code, written, stderr, _ = run_main(broken, "--apply")
+        self.assertEqual(code, 1)
+        self.assertIsNone(written)
+        self.assertIn(radiko_cron.MARKER_END, stderr)
+
+    def test_end_marker_before_begin_is_treated_as_missing(self):
+        broken = f"{radiko_cron.MARKER_END}\n{radiko_cron.MARKER_BEGIN}\n"
+        with self.assertRaises(radiko_cron.CrontabError):
+            radiko_cron.merge_crontab(broken, "x\n")
+
+    def test_crontab_rejecting_input_is_reported(self):
+        error = radiko_cron.subprocess.CalledProcessError(1, "crontab")
+        code, _, stderr, _ = run_main("", "--apply", run_error=error)
+        self.assertEqual(code, 1)
+        self.assertIn("schedule", stderr)
 
 
 if __name__ == "__main__":

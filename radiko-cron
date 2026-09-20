@@ -47,11 +47,20 @@ def registered_config(existing: str) -> str | None:
     return None
 
 
+class CrontabError(Exception):
+    pass
+
+
 def merge_crontab(existing: str, block: str) -> str:
     lines = existing.splitlines()
     if MARKER_BEGIN in lines:
         start = lines.index(MARKER_BEGIN)
-        end = lines.index(MARKER_END) + 1
+        if MARKER_END not in lines[start:]:
+            raise CrontabError(
+                f"crontabの管理ブロックに終端の行（{MARKER_END}）がありません。"
+                "crontab -e で修正してから再実行してください。"
+            )
+        end = lines.index(MARKER_END, start) + 1
         lines = lines[:start] + block.splitlines() + lines[end:]
     else:
         if lines and lines[-1].strip():
@@ -87,14 +96,26 @@ def main(argv: list[str] | None = None) -> int:
             print(f"エラー: {message}\n置き換えてよい場合は --force を付けてください。", file=sys.stderr)
             return 1
         print(f"警告: {message}", file=sys.stderr)
-    new_crontab = merge_crontab(existing, block)
+    try:
+        new_crontab = merge_crontab(existing, block)
+    except CrontabError as exc:
+        print(f"エラー: {exc}", file=sys.stderr)
+        return 1
 
     if not args.apply:
         print(new_crontab, end="")
         print("\n--apply を付けて実行すると上記をcrontabへ反映します", file=sys.stderr)
         return 0
 
-    subprocess.run(["crontab", "-"], input=new_crontab, text=True, check=True)
+    try:
+        subprocess.run(["crontab", "-"], input=new_crontab, text=True, check=True)
+    except subprocess.CalledProcessError:
+        print(
+            "エラー: crontabへの反映に失敗しました。config.toml の schedule の書式"
+            "（分 時 日 月 曜日）を確認してください。crontabは更新されていません。",
+            file=sys.stderr,
+        )
+        return 1
     print("crontabを更新しました")
     return 0
 

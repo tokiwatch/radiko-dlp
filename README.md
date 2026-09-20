@@ -132,6 +132,8 @@ If the guide cannot be fetched, a warning is logged and recording continues: `{t
 
 ## Scheduling with cron
 
+Full details are in the [radiko-cron manual](docs/radiko-cron.md).
+
 `radiko-cron` writes **one line per program that has a `schedule`**, inside a managed block of your crontab. It does not install a resident process, and the lines are short:
 
 ```
@@ -196,6 +198,8 @@ Exit codes:
 
 ### `radiko-cron`
 
+See the [radiko-cron manual](docs/radiko-cron.md) for details.
+
 ```
 ./radiko-cron [--config CONFIG] [--apply] [--force]
 ```
@@ -230,6 +234,7 @@ radiko_dlp/
   config.py          config loading and validation
   guide.py           program guide lookup and filename sanitizing
   station.py         station availability checks (area, NHK Radio 2)
+docs/                manuals (radiko-cron)
 tests/               unit tests
 ```
 
