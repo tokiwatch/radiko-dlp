@@ -20,7 +20,7 @@ station_url = "https://radiko.jp/#!/live/JOAK-FM"
 duration = "00:51:00"
 schedule = "10 8 * * 0"
 output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
-filename = "{date}_gendai_no_ongaku.m4a"
+filename = "{date}_{title}.m4a"
 ```
 
 | 項目 | 内容 |
@@ -31,7 +31,17 @@ filename = "{date}_gendai_no_ongaku.m4a"
 | `duration` | 録音時間（`HH:MM:SS`） |
 | `schedule` | cron形式のスケジュール（`manage_cron.py`で使用、省略可） |
 | `output_dir` | 保存先ディレクトリ |
-| `filename` | 出力ファイル名テンプレート（`{date}`, `{key}`が使用可能） |
+| `filename` | 出力ファイル名テンプレート（`{date}`, `{key}`, `{title}`が使用可能） |
+| `station_id` | 番組表の局ID（省略時は`station_url`の`/live/`以降から取得） |
+
+## 番組情報の記録
+
+録音開始時刻に放送中の番組（録音時間内で重なりが最大の番組）を radiko の番組表から取得し、次のように反映します。
+
+- ファイル名: `{title}` に放送回のタイトルが入ります（全角英数字は半角に正規化し、使えない文字は `_` に置換）
+- m4a のタグ: `title`（放送回タイトル）、`artist`（出演者）、`album`（configの`name`）、`date`（放送日）、`comment`（番組説明と番組ページURL）
+
+番組表を取得できなかった場合も録音は続行し、`{title}`と`title`タグにはconfigの`name`を使います（警告はログに出力）。
 
 ## 使い方
 
@@ -41,7 +51,7 @@ filename = "{date}_gendai_no_ongaku.m4a"
 python3 record.py gendai_no_ongaku
 ```
 
-コマンドを確認するだけ（実行しない）場合は `--dry-run` を付けます。
+番組表を取得し、実行コマンドと書き込まれるタグを確認するだけ（録音しない）場合は `--dry-run` を付けます。
 
 ```sh
 python3 record.py gendai_no_ongaku --dry-run
@@ -59,3 +69,9 @@ python3 manage_cron.py --apply  # 実際にcrontabへ反映
 ```
 
 既存のcrontabのうち `# BEGIN radiru-dlp` 〜 `# END radiru-dlp` の間だけを書き換え、それ以外のエントリはそのまま保持します。
+
+## テスト
+
+```sh
+python3 -m unittest discover -s tests
+```

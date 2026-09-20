@@ -18,6 +18,12 @@ class Program:
     output_dir: str
     filename: str = "{date}_{key}.m4a"
     schedule: str | None = None
+    station_id: str | None = None
+
+    @property
+    def duration_seconds(self) -> int:
+        hours, minutes, seconds = (int(part) for part in self.duration.split(":"))
+        return hours * 3600 + minutes * 60 + seconds
 
 
 @dataclass(frozen=True)
@@ -59,7 +65,14 @@ def load_config(path: Path) -> Config:
             output_dir=entry["output_dir"],
             filename=entry.get("filename", "{date}_{key}.m4a"),
             schedule=entry.get("schedule"),
+            station_id=entry.get("station_id"),
         )
+        try:
+            programs[key].duration_seconds
+        except ValueError:
+            raise ConfigError(
+                f"durationは HH:MM:SS 形式で指定してください: {key} ({entry['duration']})"
+            ) from None
 
     if not programs:
         raise ConfigError("programsが1件も定義されていません")

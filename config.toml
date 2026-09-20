@@ -6,7 +6,9 @@
 #   station_url : radiko.jpのライブページURL（例: https://radiko.jp/#!/live/JOAK-FM）
 #   duration    : 録音時間 "HH:MM:SS"
 #   output_dir  : 保存先ディレクトリ
-#   filename    : 出力ファイル名テンプレート（{date}, {key} が使用可能）
+#   filename    : 出力ファイル名テンプレート（{date}, {key}, {title} が使用可能）
+#                 {title}は番組表の放送回タイトル。取得できない場合はnameになる
+#   station_id  : 番組表の局ID（省略時はstation_urlの /live/ 以降から取得）
 #   schedule    : cron形式のスケジュール（manage_cron.pyで使用。省略可）
 
 [[programs]]
@@ -16,4 +18,4 @@ station_url = "https://radiko.jp/#!/live/JOAK-FM"
 duration = "00:51:00"
 schedule = "10 8 * * 0"
 output_dir = "/home/tokiwa/Music/NHK/gendai_no_ongaku"
-filename = "{date}_gendai_no_ongaku.m4a"
+filename = "{date}_{title}.m4a"
