@@ -44,18 +44,18 @@ cp config.example.toml config.toml
 ./radiko-record sample_program --test
 
 # 4. crontab の内容をプレビューし、反映する
-./manage_cron.py
-./manage_cron.py --apply
+./radiko-cron
+./radiko-cron --apply
 ```
 
-- コマンドの形は `./radiko-record [--config ファイル] <key>` で、`manage_cron.py` が crontab に書く形と同じです。`<key>` は設定ファイルに書いた番組の `key` です（`sample.toml` では `quickstart`、`config.toml` では `sample_program`）。`--config` を省略すると `config.toml` を読みます。
+- コマンドの形は `./radiko-record [--config ファイル] <key>` で、`radiko-cron` が crontab に書く形と同じです。`<key>` は設定ファイルに書いた番組の `key` です（`sample.toml` では `quickstart`、`config.toml` では `sample_program`）。`--config` を省略すると `config.toml` を読みます。
 - 録音されるのは、指定した `key` の番組だけです。設定ファイルに番組が複数あっても、ほかの番組には影響しません。番組ごとにコマンドを実行します。
 - 手順 1 は、実行するとすぐ録音を始め、約 1 分で終了します（`sample.toml` は `duration = "00:01:00"` で `schedule` がないため、cron には登録されません）。`--dry-run` は録音しません。
 - `JOAK-FM` は東京の NHK-FM です。東京エリア以外ではエリア外のメッセージが出て中止するので、`sample.toml` の局IDを変更してください（[対応する局と制約](#対応する局と制約)を参照）。
 - 手順 3 の `--test` は、1 分だけ録音し、番組の `output_dir` の中の `test/` に保存します。お試しの録音が本番の録音と混ざりません。**`--test` を付けないと、すぐに設定した `duration` の長さで、本番の `output_dir` に録音します。**
 - 手順 4 のあとに自動で録音が始まるのは、`schedule` の時刻だけです。
 
-`radiko-record` と `manage_cron.py` は実行ファイルなので、先頭に `python3` は不要です。
+`radiko-record` と `radiko-cron` は実行ファイルなので、先頭に `python3` は不要です。
 
 ## 設定
 
@@ -80,7 +80,7 @@ filename = "{date}_{title}.m4a"
 | `duration` | 必須 | 録音時間（`HH:MM:SS`）。番組の長さ + 1 分ほどが目安 |
 | `output_dir` | 必須 | 保存先ディレクトリ（なければ作成）。`~` は展開される |
 | `filename` | 任意 | ファイル名テンプレート。省略時は `{date}_{key}.m4a`。使えるのは `{date}`、`{key}`、`{title}` |
-| `schedule` | 任意 | cron 形式（`分 時 日 月 曜日`）。`manage_cron.py` が使う。省略した番組は登録されない |
+| `schedule` | 任意 | cron 形式（`分 時 日 月 曜日`）。`radiko-cron` が使う。省略した番組は登録されない |
 | `station_id` | 任意 | 番組表の取得に使う局ID。`station_url` が NHK のプレーヤーの URL のときに必要（例: `"JOAK-FM"`） |
 
 TOML の注意点: 文字列は必ず `"` で囲みます。`#` から行末まではコメントです。`key` は重複させないでください。
@@ -132,7 +132,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 
 ## cron での定期実行
 
-`manage_cron.py` は、`schedule` を持つ**番組ごとに 1 行**を、crontab の管理ブロックに書き込みます。常駐するプログラムを入れるわけではなく、行も短いものです。
+`radiko-cron` は、`schedule` を持つ**番組ごとに 1 行**を、crontab の管理ブロックに書き込みます。常駐するプログラムを入れるわけではなく、行も短いものです。
 
 ```
 # BEGIN radiko-dlp (auto-generated, do not edit)
@@ -143,7 +143,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 
 - 書き換わるのは `# BEGIN radiko-dlp` と `# END radiko-dlp` の間だけです。ほかの crontab のエントリには触れません。何度実行しても結果は同じです。
 - `radiko-record` は実行のたびに `config.toml` を読み直します。`duration`、`output_dir`、`filename`、`station_url` などの変更は、再登録しなくても次の録音から反映されます。
-- `schedule` の変更、番組の追加・削除、`key` の変更、リポジトリの移動（行に絶対パスが入っているため）をしたときは、`./manage_cron.py --apply` をやり直してください。
+- `schedule` の変更、番組の追加・削除、`key` の変更、リポジトリの移動（行に絶対パスが入っているため）をしたときは、`./radiko-cron --apply` をやり直してください。
 - ブロックの中を手で編集しても、次の実行で上書きされます。
 - 予定の時刻にマシンが起動している必要があります。
 
@@ -194,10 +194,10 @@ ffmpeg = "/usr/bin/ffmpeg"
 | `1` | 設定エラー、または `yt-dlp` の失敗（`yt-dlp` の終了コードをそのまま返す） |
 | `2` | 録音できない局（NHK ラジオ第2、エリア外、存在しない局ID、日本国外） |
 
-### `manage_cron.py`
+### `radiko-cron`
 
 ```
-./manage_cron.py [--config CONFIG] [--apply] [--force]
+./radiko-cron [--config CONFIG] [--apply] [--force]
 ```
 
 `--apply` を付けないと、反映後の crontab を表示するだけです。`--apply` を付けると実際に反映します。
@@ -220,7 +220,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 
 ```
 radiko-record        録音コマンド（実行ファイル）
-manage_cron.py       crontab の生成
+radiko-cron        crontab の生成
 sample.toml          クイックスタート用サンプル（NHK-FM を 1 分録音）
 config.example.toml  config.toml のひな形
 config.toml          自分用の番組定義（git 管理外）

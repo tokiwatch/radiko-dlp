@@ -44,18 +44,18 @@ cp config.example.toml config.toml
 ./radiko-record sample_program --test
 
 # 4. Preview the crontab lines, then register them
-./manage_cron.py
-./manage_cron.py --apply
+./radiko-cron
+./radiko-cron --apply
 ```
 
-- The command form is `./radiko-record [--config FILE] <key>`, the same form that `manage_cron.py` writes into crontab. `<key>` is the `key` of one program defined in the config file (`quickstart` in `sample.toml`, `sample_program` in `config.toml`). Without `--config`, `config.toml` is used.
+- The command form is `./radiko-record [--config FILE] <key>`, the same form that `radiko-cron` writes into crontab. `<key>` is the `key` of one program defined in the config file (`quickstart` in `sample.toml`, `sample_program` in `config.toml`). Without `--config`, `config.toml` is used.
 - Only the program with that `key` is recorded. If a config file defines several programs, the others are not touched; run the command once per program.
 - Step 1 starts recording immediately and stops after about one minute (`sample.toml` sets `duration = "00:01:00"` and has no `schedule`, so nothing is registered in cron). `--dry-run` never records.
 - `JOAK-FM` is NHK-FM Tokyo. Outside the Tokyo area the command stops with an area message; change the station ID in `sample.toml` (see [Stations and limitations](#stations-and-limitations)).
 - Step 3: `--test` records only 1 minute and saves into the `test/` subdirectory of the program's `output_dir`, so a trial never mixes with the real recordings. **Without `--test`, the command records for the full `duration` right away into the real `output_dir`.**
 - After step 4, recording starts automatically only at the `schedule` times.
 
-`radiko-record` and `manage_cron.py` are executable scripts, so `python3` is not needed in front of them.
+`radiko-record` and `radiko-cron` are executable scripts, so `python3` is not needed in front of them.
 
 ## Configuration
 
@@ -80,7 +80,7 @@ filename = "{date}_{title}.m4a"
 | `duration` | yes | Recording length as `HH:MM:SS`. Use the program length plus about one minute |
 | `output_dir` | yes | Destination directory (created if missing). `~` is expanded |
 | `filename` | no | Filename template. Default: `{date}_{key}.m4a`. Placeholders: `{date}`, `{key}`, `{title}` |
-| `schedule` | no | Cron expression (`minute hour day month weekday`). Used by `manage_cron.py`; programs without it are not scheduled |
+| `schedule` | no | Cron expression (`minute hour day month weekday`). Used by `radiko-cron`; programs without it are not scheduled |
 | `station_id` | no | Station ID used for the program guide. Needed when `station_url` is an NHK player URL (e.g. `"JOAK-FM"`) |
 
 Notes on TOML: strings must be quoted, `#` starts a comment, and `key` must be unique.
@@ -132,7 +132,7 @@ If the guide cannot be fetched, a warning is logged and recording continues: `{t
 
 ## Scheduling with cron
 
-`manage_cron.py` writes **one line per program that has a `schedule`**, inside a managed block of your crontab. It does not install a resident process, and the lines are short:
+`radiko-cron` writes **one line per program that has a `schedule`**, inside a managed block of your crontab. It does not install a resident process, and the lines are short:
 
 ```
 # BEGIN radiko-dlp (auto-generated, do not edit)
@@ -143,7 +143,7 @@ If the guide cannot be fetched, a warning is logged and recording continues: `{t
 
 - Only the block between `# BEGIN radiko-dlp` and `# END radiko-dlp` is rewritten; every other crontab entry is left alone. Running it repeatedly gives the same result.
 - `radiko-record` reads `config.toml` every time it runs, so changes to `duration`, `output_dir`, `filename`, `station_url` and so on take effect at the next recording without re-registering.
-- Re-run `./manage_cron.py --apply` after changing a `schedule`, adding or removing a program, changing a `key`, or moving the repository (the lines contain absolute paths).
+- Re-run `./radiko-cron --apply` after changing a `schedule`, adding or removing a program, changing a `key`, or moving the repository (the lines contain absolute paths).
 - Edits you make by hand inside the block are overwritten on the next run.
 - The machine must be powered on at the scheduled time.
 
@@ -194,10 +194,10 @@ Exit codes:
 | `1` | Configuration error, or `yt-dlp` failed (its exit code is passed through) |
 | `2` | The station cannot be recorded (NHK Radio 2, outside your area, unknown ID, outside Japan) |
 
-### `manage_cron.py`
+### `radiko-cron`
 
 ```
-./manage_cron.py [--config CONFIG] [--apply] [--force]
+./radiko-cron [--config CONFIG] [--apply] [--force]
 ```
 
 Without `--apply` it only prints the resulting crontab. With `--apply` it installs it.
@@ -222,7 +222,7 @@ Messages printed by the tool (and written to the log) are in Japanese.
 
 ```
 radiko-record        recording command (executable script)
-manage_cron.py       crontab generator
+radiko-cron        crontab generator
 sample.toml          quick start sample (records NHK-FM for 1 minute)
 config.example.toml  template for config.toml
 config.toml          your program definitions (not tracked by git)

@@ -12,7 +12,7 @@
 #   filename    : 出力ファイル名テンプレート（{date}, {key}, {title} が使用可能）
 #                 {title}は番組表の放送回タイトル。取得できない場合はnameになる
 #   station_id  : 番組表の局ID（省略時はstation_urlの /live/ 以降から取得）
-#   schedule    : cron形式のスケジュール（manage_cron.pyで使用。省略可）
+#   schedule    : cron形式のスケジュール（radiko-cronで使用。省略可）
 
 # yt-dlp / ffmpeg のパス（省略可。省略時は /usr/bin/yt-dlp と /usr/bin/ffmpeg）
 # コマンド名だけ（"yt-dlp"）を書くとPATHから探します。radiko-record の --yt-dlp / --ffmpeg が優先されます。
@@ -31,7 +31,7 @@ filename = "{date}_{title}.m4a"
 
 # ---------------------------------------------------------------------------
 # 以下はサンプルです。使うときは先頭の「# 」を外し、番組に合わせて書き換えてください。
-# 追加・変更したあと schedule を反映するには: ./manage_cron.py --apply
+# 追加・変更したあと schedule を反映するには: ./radiko-cron --apply
 # ---------------------------------------------------------------------------
 
 # 【radiko: NHK-FM「吹奏楽のひびき」】局ID: JOAK-FM
