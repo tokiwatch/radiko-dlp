@@ -50,7 +50,7 @@ cp config.example.toml config.toml
 
 - 手順 1 は、実行するとすぐ録音を始め、1 分後に終了します（`sample.toml` は `duration = "00:01:00"` で `schedule` がないため、cron には登録されません）。`--dry-run` は録音しません。
 - `JOAK-FM` は東京の NHK-FM です。東京エリア以外ではエリア外のメッセージが出て中止するので、`sample.toml` の局IDを変更してください（[対応する局と制約](#対応する局と制約)を参照）。
-- 手順 3 も、実行するとすぐ録音を始め、設定した `duration`（ひな形では 51 分）の間続きます。先に `--dry-run` を使うか、試すときは `duration` を短くしてください。
+- 手順 3 も、実行するとすぐ録音を始め、設定した `duration`（ひな形では 1 分。実際の番組では番組の長さ + 1 分ほど）の間続きます。
 - 自動で録音が始まるのは、手順 4 のあとの `schedule` の時刻です。
 
 `radiko-record` と `manage_cron.py` は実行ファイルなので、先頭に `python3` は不要です。
@@ -64,7 +64,7 @@ cp config.example.toml config.toml
 key = "sample_program"
 name = "サンプル番組"
 station_url = "https://radiko.jp/#!/live/JOAK-FM"
-duration = "00:51:00"
+duration = "00:01:00"
 schedule = "10 8 * * 0"
 output_dir = "~/Music/radiko/sample_program"
 filename = "{date}_{title}.m4a"

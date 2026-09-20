@@ -24,7 +24,7 @@
 key = "sample_program"
 name = "Sample Program"
 station_url = "https://radiko.jp/#!/live/JOAK-FM"
-duration = "00:51:00"
+duration = "00:01:00"            # お試し用の1分。実際の番組では「番組の長さ + 1分」ほどにする
 schedule = "10 8 * * 0"            # 毎週日曜 08:10
 output_dir = "~/Music/radiko/sample_program"
 filename = "{date}_{title}.m4a"

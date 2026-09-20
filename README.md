@@ -50,7 +50,7 @@ cp config.example.toml config.toml
 
 - Step 1 starts recording immediately and stops after one minute (`sample.toml` sets `duration = "00:01:00"` and has no `schedule`, so nothing is registered in cron). `--dry-run` never records.
 - `JOAK-FM` is NHK-FM Tokyo. Outside the Tokyo area the command stops with an area message; change the station ID in `sample.toml` (see [Stations and limitations](#stations-and-limitations)).
-- Step 3 also records right away, for the `duration` in your config (51 minutes in the template). Use `--dry-run` first, or shorten `duration` while testing.
+- Step 3 also records right away, for the `duration` in your config (1 minute in the template; for a real program use its length plus about one minute).
 - Recording only starts automatically at the `schedule` time after step 4.
 
 `radiko-record` and `manage_cron.py` are executable scripts, so `python3` is not needed in front of them.
@@ -64,7 +64,7 @@ Programs are defined in `config.toml`. Create it by copying the template (`cp co
 key = "sample_program"
 name = "Sample Program"
 station_url = "https://radiko.jp/#!/live/JOAK-FM"
-duration = "00:51:00"
+duration = "00:01:00"
 schedule = "10 8 * * 0"
 output_dir = "~/Music/radiko/sample_program"
 filename = "{date}_{title}.m4a"
