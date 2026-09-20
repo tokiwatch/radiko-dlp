@@ -4,8 +4,8 @@ import re
 import xml.etree.ElementTree as ET
 from urllib.parse import parse_qs, urlparse
 
-from radiru_dlp.config import Program
-from radiru_dlp.guide import STATION_RE, fetch_text
+from radiko_dlp.config import Program
+from radiko_dlp.guide import STATION_RE, fetch_text
 
 AREA_URL = "https://radiko.jp/area"
 AREA_STATIONS_URL = "https://radiko.jp/v3/station/list/{area}.xml"

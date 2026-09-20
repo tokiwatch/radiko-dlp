@@ -2,7 +2,7 @@ import gzip
 import unittest
 from datetime import datetime, timedelta
 
-from radiru_dlp.guide import (
+from radiko_dlp.guide import (
     JST,
     GuideError,
     decode_body,

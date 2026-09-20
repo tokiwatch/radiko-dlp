@@ -10,8 +10,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from radiru_dlp.config import ConfigError, Program, load_config
-from radiru_dlp.guide import (
+from radiko_dlp.config import ConfigError, Program, load_config
+from radiko_dlp.guide import (
     JST,
     GuideError,
     ProgramInfo,
@@ -19,7 +19,7 @@ from radiru_dlp.guide import (
     sanitize_filename_part,
     station_id_from_url,
 )
-from radiru_dlp.station import StationError, check_station
+from radiko_dlp.station import StationError, check_station
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "config.toml"
 EXIT_STATION_UNAVAILABLE = 2

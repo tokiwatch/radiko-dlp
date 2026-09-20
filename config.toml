@@ -1,7 +1,7 @@
-# radiru-dlp 番組設定
+# radiko-dlp 番組設定
 #
 # [[programs]] を番組ごとに追加してください。
-#   key         : record.py / crontab から参照する識別子（一意）
+#   key         : radiko-record / crontab から参照する識別子（一意）
 #   name        : 番組名（ログ表示用）
 #   station_url : radiko.jpのライブページURL（例: https://radiko.jp/#!/live/JOAK-FM）
 #   duration    : 録音時間 "HH:MM:SS"
@@ -22,7 +22,7 @@ filename = "{date}_{title}.m4a"
 
 # ---------------------------------------------------------------------------
 # 以下はサンプルです。使うときは先頭の「# 」を外し、番組に合わせて書き換えてください。
-# 追加・変更したあと schedule を反映するには: python3 manage_cron.py --apply
+# 追加・変更したあと schedule を反映するには: ./manage_cron.py --apply
 # ---------------------------------------------------------------------------
 
 # 【radiko: NHK-FM「吹奏楽のひびき」】局ID: JOAK-FM

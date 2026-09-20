@@ -1,6 +1,6 @@
-# radiru-dlp
+# radiko-dlp
 
-NHK らじる★らじる（radiko.jp経由）の番組を、yt-dlp + ffmpeg でスケジュール録音するためのツールです。
+radiko.jp のライブ放送（NHK・民放）を、yt-dlp + ffmpeg でスケジュール録音するためのツールです。NHK は らじる★らじる 経由でも録音できます。
 
 ## 必要なもの
 
@@ -25,7 +25,7 @@ filename = "{date}_{title}.m4a"
 
 | 項目 | 内容 |
 | --- | --- |
-| `key` | `record.py`やcrontabから参照する一意の識別子 |
+| `key` | `radiko-record`やcrontabから参照する一意の識別子 |
 | `name` | 番組名（ログ表示用） |
 | `station_url` | radiko.jpのライブページURL |
 | `duration` | 録音時間（`HH:MM:SS`） |
@@ -58,13 +58,13 @@ filename = "{date}_{title}.m4a"
 ### 手動で録音する
 
 ```sh
-python3 record.py gendai_no_ongaku
+./radiko-record gendai_no_ongaku
 ```
 
 番組表を取得し、実行コマンドと書き込まれるタグを確認するだけ（録音しない）場合は `--dry-run` を付けます。
 
 ```sh
-python3 record.py gendai_no_ongaku --dry-run
+./radiko-record gendai_no_ongaku --dry-run
 ```
 
 ログは `output_dir/logs/<key>.log` に出力されます。
@@ -74,11 +74,11 @@ python3 record.py gendai_no_ongaku --dry-run
 `config.toml`の`schedule`をもとにcrontabへ反映します。デフォルトでは反映後の内容を表示するだけです。
 
 ```sh
-python3 manage_cron.py          # 反映内容をプレビュー
-python3 manage_cron.py --apply  # 実際にcrontabへ反映
+./manage_cron.py          # 反映内容をプレビュー
+./manage_cron.py --apply  # 実際にcrontabへ反映
 ```
 
-既存のcrontabのうち `# BEGIN radiru-dlp` 〜 `# END radiru-dlp` の間だけを書き換え、それ以外のエントリはそのまま保持します。
+既存のcrontabのうち `# BEGIN radiko-dlp` 〜 `# END radiko-dlp` の間だけを書き換え、それ以外のエントリはそのまま保持します。
 
 ## テスト
 

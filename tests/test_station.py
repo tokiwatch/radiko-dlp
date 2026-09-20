@@ -1,8 +1,8 @@
 import unittest
 from unittest import mock
 
-from radiru_dlp.config import Program
-from radiru_dlp.station import (
+from radiko_dlp.config import Program
+from radiko_dlp.station import (
     AREA_STATIONS_URL,
     AREA_URL,
     FULL_STATIONS_URL,
@@ -42,7 +42,7 @@ RADIKO_OK = {
 
 
 def check(url: str, responses: dict) -> str | None:
-    with mock.patch("radiru_dlp.station.fetch_text", fake_fetch(responses)):
+    with mock.patch("radiko_dlp.station.fetch_text", fake_fetch(responses)):
         return check_station(program(url))
 
 

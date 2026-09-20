@@ -7,20 +7,20 @@ import subprocess
 import sys
 from pathlib import Path
 
-from radiru_dlp.config import Config, ConfigError, load_config
+from radiko_dlp.config import Config, ConfigError, load_config
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "config.toml"
-MARKER_BEGIN = "# BEGIN radiru-dlp (auto-generated, do not edit)"
-MARKER_END = "# END radiru-dlp"
+MARKER_BEGIN = "# BEGIN radiko-dlp (auto-generated, do not edit)"
+MARKER_END = "# END radiko-dlp"
 
 
-def build_block(config: Config, python: str, record_script: Path, config_path: Path) -> str:
+def build_block(config: Config, record_script: Path, config_path: Path) -> str:
     lines = [MARKER_BEGIN]
     for program in config.programs.values():
         if not program.schedule:
             continue
         lines.append(
-            f"{program.schedule} {python} {record_script} --config {config_path} {program.key}"
+            f"{program.schedule} {record_script} --config {config_path} {program.key}"
         )
     lines.append(MARKER_END)
     return "\n".join(lines) + "\n"
@@ -49,7 +49,6 @@ def merge_crontab(existing: str, block: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--apply", action="store_true", help="実際にcrontabへ反映する（省略時は表示のみ）")
     args = parser.parse_args(argv)
 
@@ -59,8 +58,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"設定エラー: {exc}", file=sys.stderr)
         return 1
 
-    record_script = Path(__file__).resolve().parent / "record.py"
-    block = build_block(config, args.python, record_script, args.config.resolve())
+    record_script = Path(__file__).resolve().parent / "radiko-record"
+    block = build_block(config, record_script, args.config.resolve())
     new_crontab = merge_crontab(current_crontab(), block)
 
     if not args.apply:
