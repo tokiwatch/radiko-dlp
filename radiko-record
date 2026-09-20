@@ -19,6 +19,7 @@ from radiko_dlp.guide import (
     sanitize_filename_part,
     station_id_from_url,
 )
+from radiko_dlp.recording import apply_test_mode, unique_path
 from radiko_dlp.station import StationError, check_station
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "config.toml"
@@ -91,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="設定ファイルのパス")
     parser.add_argument("--yt-dlp", help="yt-dlpのパス（config.tomlの[tools]より優先）")
     parser.add_argument("--ffmpeg", help="ffmpegのパス（config.tomlの[tools]より優先）")
+    parser.add_argument("--test", action="store_true", help="お試し録音: 1分だけ録音し、保存先を <output_dir>/test/ にする（本番のファイルと混ざらない）")
     parser.add_argument("--dry-run", action="store_true", help="番組表を取得してコマンドとタグを表示するだけで録音しない")
     args = parser.parse_args(argv)
 
@@ -98,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = load_config(args.config)
         program = config.get(args.key)
+        if args.test:
+            program = apply_test_mode(program)
         yt_dlp = resolve_tool("yt-dlp", args.yt_dlp or config.yt_dlp)
         ffmpeg = resolve_tool("ffmpeg", args.ffmpeg or config.ffmpeg)
     except ConfigError as exc:
@@ -105,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     output_dir = Path(program.output_dir).expanduser()
+    if args.test:
+        print(f"テストモード: {program.duration} だけ録音し、{output_dir} に保存します。")
     if not args.dry_run:
         log_dir = output_dir / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -133,10 +139,14 @@ def main(argv: list[str] | None = None) -> int:
     if guide_error:
         warn(f"番組表を利用できないため設定の番組名で録音します: {guide_error}")
     try:
-        output_path = build_output_path(program, info, start)
+        wanted_path = build_output_path(program, info, start)
     except ConfigError as exc:
         print(f"設定エラー: {exc}", file=sys.stderr)
         return 1
+
+    output_path = unique_path(wanted_path)
+    if output_path != wanted_path:
+        warn(f"同名のファイルが既に存在するため、別名で保存します: {output_path.name}")
 
     tags = build_tags(program, info, start)
     command = build_command(ffmpeg, yt_dlp, program, output_path)
@@ -152,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
         logging.error("録音失敗 (exit=%s): %s", result.returncode, result.stderr.strip())
+        print(f"エラー: 録音に失敗しました (exit={result.returncode})。詳細: {log_dir / (program.key + '.log')}", file=sys.stderr)
         return result.returncode
 
     logging.info("録音完了: %s", output_path)
@@ -160,6 +171,8 @@ def main(argv: list[str] | None = None) -> int:
         logging.info("メタデータを記録しました: %s", tags.get("title"))
     except RuntimeError as exc:
         logging.error("メタデータの記録に失敗しました（録音ファイルは保持）: %s", exc)
+    if args.test:
+        print(f"録音しました: {output_path}")
     return 0
 
 

@@ -33,25 +33,27 @@ cd radiko-dlp
 
 # 1. Try it: check first (records nothing), then record NHK-FM for 1 minute right now
 #    (uses sample.toml; the file is saved to ~/Music/radiko/quickstart/)
-./radiko-record quickstart --config sample.toml --dry-run
-./radiko-record quickstart --config sample.toml
+./radiko-record --config sample.toml quickstart --dry-run
+./radiko-record --config sample.toml quickstart
 
 # 2. Create your own config from the template, then edit it (see "Configuration")
 cp config.example.toml config.toml
 
-# 3. Check and record your own program
+# 3. Check your own program, then try a 1-minute test recording
 ./radiko-record sample_program --dry-run
-./radiko-record sample_program
+./radiko-record sample_program --test
 
 # 4. Preview the crontab lines, then register them
 ./manage_cron.py
 ./manage_cron.py --apply
 ```
 
-- Step 1 starts recording immediately and stops after one minute (`sample.toml` sets `duration = "00:01:00"` and has no `schedule`, so nothing is registered in cron). `--dry-run` never records.
+- The command form is `./radiko-record [--config FILE] <key>`, the same form that `manage_cron.py` writes into crontab. `<key>` is the `key` of one program defined in the config file (`quickstart` in `sample.toml`, `sample_program` in `config.toml`). Without `--config`, `config.toml` is used.
+- Only the program with that `key` is recorded. If a config file defines several programs, the others are not touched; run the command once per program.
+- Step 1 starts recording immediately and stops after about one minute (`sample.toml` sets `duration = "00:01:00"` and has no `schedule`, so nothing is registered in cron). `--dry-run` never records.
 - `JOAK-FM` is NHK-FM Tokyo. Outside the Tokyo area the command stops with an area message; change the station ID in `sample.toml` (see [Stations and limitations](#stations-and-limitations)).
-- Step 3 also records right away, for the `duration` in your config (1 minute in the template; for a real program use its length plus about one minute).
-- Recording only starts automatically at the `schedule` time after step 4.
+- Step 3: `--test` records only 1 minute and saves into the `test/` subdirectory of the program's `output_dir`, so a trial never mixes with the real recordings. **Without `--test`, the command records for the full `duration` right away into the real `output_dir`.**
+- After step 4, recording starts automatically only at the `schedule` times.
 
 `radiko-record` and `manage_cron.py` are executable scripts, so `python3` is not needed in front of them.
 
@@ -124,6 +126,8 @@ At start time the tool fetches the day's guide for the station and picks the pro
 | Tag `date` | Broadcast date (`YYYY-MM-DD`) |
 | Tag `comment` | Episode description and program page URL |
 
+If a file with the same name already exists (for example the same episode recorded twice on one day), the new recording is saved as `<name>_2.m4a`, `_3`, and so on. An existing recording is never overwritten or skipped, so a manual run cannot cause a scheduled recording to be lost.
+
 If the guide cannot be fetched, a warning is logged and recording continues: `{title}` and the `title` tag fall back to `name`. If tagging itself fails, the recording is kept and an error is logged.
 
 ## Scheduling with cron
@@ -132,6 +136,7 @@ If the guide cannot be fetched, a warning is logged and recording continues: `{t
 
 ```
 # BEGIN radiko-dlp (auto-generated, do not edit)
+# config: /home/user/radiko-dlp/config.toml
 10 8 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml sample_program
 # END radiko-dlp
 ```
@@ -168,7 +173,7 @@ For other areas, open the station on radiko and copy the ID from the URL (`https
 ### `radiko-record`
 
 ```
-./radiko-record [--config CONFIG] [--yt-dlp PATH] [--ffmpeg PATH] [--dry-run] key
+./radiko-record [--config CONFIG] [--yt-dlp PATH] [--ffmpeg PATH] [--test] [--dry-run] key
 ```
 
 | Option | Description |
@@ -176,6 +181,7 @@ For other areas, open the station on radiko and copy the ID from the URL (`https
 | `key` | The `key` of a program in `config.toml` |
 | `--config` | Path to the config file (default: `config.toml` next to the script) |
 | `--yt-dlp`, `--ffmpeg` | Paths to the executables. They override `[tools]` in `config.toml` (default: `/usr/bin/yt-dlp`, `/usr/bin/ffmpeg`) |
+| `--test` | Trial recording: records at most 1 minute and saves into `<output_dir>/test/` (logs too), leaving the real `output_dir` untouched. Prints the saved path when done |
 | `--dry-run` | Check the station, fetch the guide, and print the command and the tags. Records nothing and creates no files |
 
 Logs are appended to `<output_dir>/logs/<key>.log`. Warnings and errors are also printed to stderr.
@@ -191,10 +197,12 @@ Exit codes:
 ### `manage_cron.py`
 
 ```
-./manage_cron.py [--config CONFIG] [--apply]
+./manage_cron.py [--config CONFIG] [--apply] [--force]
 ```
 
 Without `--apply` it only prints the resulting crontab. With `--apply` it installs it.
+
+The managed block records which config file it was generated from (the `# config:` line). Running `--apply` with a different config file (for example `sample.toml`) is refused unless you add `--force`, so trying another file cannot wipe your real schedule.
 
 ## Troubleshooting
 

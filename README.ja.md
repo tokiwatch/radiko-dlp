@@ -33,25 +33,27 @@ cd radiko-dlp
 
 # 1. 試してみる: まず確認だけ行い（録音しない）、NHK-FM を今すぐ 1 分間録音する
 #    （sample.toml を使用。保存先: ~/Music/radiko/quickstart/）
-./radiko-record quickstart --config sample.toml --dry-run
-./radiko-record quickstart --config sample.toml
+./radiko-record --config sample.toml quickstart --dry-run
+./radiko-record --config sample.toml quickstart
 
 # 2. ひな形から自分用の設定を作り、編集する（「設定」を参照）
 cp config.example.toml config.toml
 
-# 3. 自分の番組を確認し、録音する
+# 3. 自分の番組を確認し、1 分間のお試し録音をする
 ./radiko-record sample_program --dry-run
-./radiko-record sample_program
+./radiko-record sample_program --test
 
 # 4. crontab の内容をプレビューし、反映する
 ./manage_cron.py
 ./manage_cron.py --apply
 ```
 
-- 手順 1 は、実行するとすぐ録音を始め、1 分後に終了します（`sample.toml` は `duration = "00:01:00"` で `schedule` がないため、cron には登録されません）。`--dry-run` は録音しません。
+- コマンドの形は `./radiko-record [--config ファイル] <key>` で、`manage_cron.py` が crontab に書く形と同じです。`<key>` は設定ファイルに書いた番組の `key` です（`sample.toml` では `quickstart`、`config.toml` では `sample_program`）。`--config` を省略すると `config.toml` を読みます。
+- 録音されるのは、指定した `key` の番組だけです。設定ファイルに番組が複数あっても、ほかの番組には影響しません。番組ごとにコマンドを実行します。
+- 手順 1 は、実行するとすぐ録音を始め、約 1 分で終了します（`sample.toml` は `duration = "00:01:00"` で `schedule` がないため、cron には登録されません）。`--dry-run` は録音しません。
 - `JOAK-FM` は東京の NHK-FM です。東京エリア以外ではエリア外のメッセージが出て中止するので、`sample.toml` の局IDを変更してください（[対応する局と制約](#対応する局と制約)を参照）。
-- 手順 3 も、実行するとすぐ録音を始め、設定した `duration`（ひな形では 1 分。実際の番組では番組の長さ + 1 分ほど）の間続きます。
-- 自動で録音が始まるのは、手順 4 のあとの `schedule` の時刻です。
+- 手順 3 の `--test` は、1 分だけ録音し、番組の `output_dir` の中の `test/` に保存します。お試しの録音が本番の録音と混ざりません。**`--test` を付けないと、すぐに設定した `duration` の長さで、本番の `output_dir` に録音します。**
+- 手順 4 のあとに自動で録音が始まるのは、`schedule` の時刻だけです。
 
 `radiko-record` と `manage_cron.py` は実行ファイルなので、先頭に `python3` は不要です。
 
@@ -124,6 +126,8 @@ ffmpeg = "/usr/bin/ffmpeg"
 | タグ `date` | 放送日（`YYYY-MM-DD`） |
 | タグ `comment` | 放送回の説明と番組ページの URL |
 
+同名のファイルが既にある場合（同じ日に同じ回を 2 回録音したときなど）は、新しい録音を `<名前>_2.m4a`、`_3` … のように別名で保存します。既存の録音を上書きしたり、録音をスキップしたりすることはないので、手動で実行しても、定期実行の録音が失われることはありません。
+
 番組表が取得できないときは、警告をログに出して録音を続けます。その場合、`{title}` と `title` タグには `name` が使われます。タグの書き込みに失敗した場合も、録音ファイルは残り、エラーがログに記録されます。
 
 ## cron での定期実行
@@ -132,6 +136,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 
 ```
 # BEGIN radiko-dlp (auto-generated, do not edit)
+# config: /home/user/radiko-dlp/config.toml
 10 8 * * 0 /home/user/radiko-dlp/radiko-record --config /home/user/radiko-dlp/config.toml sample_program
 # END radiko-dlp
 ```
@@ -168,7 +173,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 ### `radiko-record`
 
 ```
-./radiko-record [--config CONFIG] [--yt-dlp PATH] [--ffmpeg PATH] [--dry-run] key
+./radiko-record [--config CONFIG] [--yt-dlp PATH] [--ffmpeg PATH] [--test] [--dry-run] key
 ```
 
 | オプション | 内容 |
@@ -176,6 +181,7 @@ ffmpeg = "/usr/bin/ffmpeg"
 | `key` | `config.toml` の番組の `key` |
 | `--config` | 設定ファイルのパス（省略時はスクリプトと同じ場所の `config.toml`） |
 | `--yt-dlp`、`--ffmpeg` | 実行ファイルのパス。`config.toml` の `[tools]` より優先される（既定: `/usr/bin/yt-dlp`、`/usr/bin/ffmpeg`） |
+| `--test` | お試し録音。最大 1 分だけ録音し、`<output_dir>/test/` に保存する（ログも同じ場所）。本番の `output_dir` には触れない。終了時に保存先のパスを表示する |
 | `--dry-run` | 局を確認し、番組表を取得して、実行コマンドとタグを表示する。録音せず、ファイルも作らない |
 
 ログは `<output_dir>/logs/<key>.log` に追記されます。警告とエラーは標準エラー出力にも表示されます。
@@ -191,10 +197,12 @@ ffmpeg = "/usr/bin/ffmpeg"
 ### `manage_cron.py`
 
 ```
-./manage_cron.py [--config CONFIG] [--apply]
+./manage_cron.py [--config CONFIG] [--apply] [--force]
 ```
 
 `--apply` を付けないと、反映後の crontab を表示するだけです。`--apply` を付けると実際に反映します。
+
+管理ブロックには、どの設定ファイルから生成したかが記録されます（`# config:` の行）。別の設定ファイル（例: `sample.toml`）で `--apply` を実行すると、`--force` を付けない限り拒否されます。別のファイルを試して、本番の予約が消えてしまうことはありません。
 
 ## トラブルシューティング
 

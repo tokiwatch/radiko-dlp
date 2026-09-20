@@ -12,10 +12,11 @@ from radiko_dlp.config import Config, ConfigError, load_config
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "config.toml"
 MARKER_BEGIN = "# BEGIN radiko-dlp (auto-generated, do not edit)"
 MARKER_END = "# END radiko-dlp"
+CONFIG_PREFIX = "# config: "
 
 
 def build_block(config: Config, record_script: Path, config_path: Path) -> str:
-    lines = [MARKER_BEGIN]
+    lines = [MARKER_BEGIN, f"{CONFIG_PREFIX}{config_path}"]
     for program in config.programs.values():
         if not program.schedule:
             continue
@@ -31,6 +32,19 @@ def current_crontab() -> str:
     if result.returncode != 0:
         return ""
     return result.stdout
+
+
+def registered_config(existing: str) -> str | None:
+    """既存のcrontabの管理ブロックが、どの設定ファイルから登録されたかを返す。"""
+    lines = existing.splitlines()
+    if MARKER_BEGIN not in lines:
+        return None
+    for line in lines[lines.index(MARKER_BEGIN) + 1:]:
+        if line == MARKER_END:
+            break
+        if line.startswith(CONFIG_PREFIX):
+            return line[len(CONFIG_PREFIX):]
+    return None
 
 
 def merge_crontab(existing: str, block: str) -> str:
@@ -49,6 +63,7 @@ def merge_crontab(existing: str, block: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--force", action="store_true", help="別の設定ファイルから登録済みの内容も上書きする")
     parser.add_argument("--apply", action="store_true", help="実際にcrontabへ反映する（省略時は表示のみ）")
     args = parser.parse_args(argv)
 
@@ -60,7 +75,19 @@ def main(argv: list[str] | None = None) -> int:
 
     record_script = Path(__file__).resolve().parent / "radiko-record"
     block = build_block(config, record_script, args.config.resolve())
-    new_crontab = merge_crontab(current_crontab(), block)
+    existing = current_crontab()
+    registered = registered_config(existing)
+    config_path = str(args.config.resolve())
+    if registered and registered != config_path:
+        message = (
+            f"crontabには別の設定ファイル（{registered}）から登録された内容があります。"
+            f"{config_path} の内容で置き換わります。"
+        )
+        if args.apply and not args.force:
+            print(f"エラー: {message}\n置き換えてよい場合は --force を付けてください。", file=sys.stderr)
+            return 1
+        print(f"警告: {message}", file=sys.stderr)
+    new_crontab = merge_crontab(existing, block)
 
     if not args.apply:
         print(new_crontab, end="")

@@ -3,8 +3,10 @@
 # NHK-FM（東京）を、今すぐ 1 分間だけ録音します。
 # schedule を書いていないので、cron には登録されません。
 #
-#   ./radiko-record quickstart --config sample.toml --dry-run   # 確認だけ（録音しない）
-#   ./radiko-record quickstart --config sample.toml             # 1 分間録音する
+#   ./radiko-record --config sample.toml quickstart --dry-run   # 確認だけ（録音しない）
+#   ./radiko-record --config sample.toml quickstart             # 1 分間録音する
+#
+# コマンドの quickstart は、下の [[programs]] の key です。
 #
 # 保存先: ~/Music/radiko/quickstart/
 #
